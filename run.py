@@ -36,11 +36,6 @@ from torch.utils.data.distributed import DistributedSampler
 from dataset import concodeDataset
 from beam import Beam
 
-try:
-    from torch.utils.tensorboard import SummaryWriter
-except:
-    from tensorboardX import SummaryWriter
-
 from torch.nn import CrossEntropyLoss
 
 from bleu import _bleu
@@ -69,12 +64,12 @@ def load_and_cache_examples(args, tokenizer, evaluate=False):
     return dataset
 
 
-def set_seed(args):
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    if args.n_gpu > 0:
-        torch.cuda.manual_seed_all(args.seed)
+def set_seed(seed, multiple_gpus=False):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if multiple_gpus:
+        torch.cuda.manual_seed_all(seed)
 
 
 def update_config(model, tokenizer):
@@ -344,20 +339,19 @@ def evaluate(args, model, tokenizer, prefix="", eval_when_training=False):
 
     return result
 
-def eval_bleu(args, model, tokenizer, file_type='test', num=2000):
-    dataset = concodeDataset(tokenizer, args, logger, file_type=file_type, block_size=args.block_size, mode='test')
-    test_sampler = SequentialSampler(dataset)
-    test_dataloader = DataLoader(dataset, sampler=test_sampler, batch_size=1)
-    model.to(args.device)
+
+def predict(model, tokenizer, dataset, device, log_every=100):
+    sampler = SequentialSampler(dataset)
+    dataloader = DataLoader(dataset, sampler=sampler, batch_size=1)
+
+    model.to(device)
     model.zero_grad()
     model.eval()
 
     preds = []
     max_gen_len = 100
-    for step, (batch, token_labels) in enumerate(test_dataloader):
-        if step >= num:
-            break
-        inputs = batch.to(args.device)
+    for step, (batch, token_labels) in enumerate(dataloader):
+        inputs = batch.to(device)
         # with torch.no_grad():
         #     outputs = model.generate(inputs, max_length=args.block_size, num_beams=10, temperature=0.7, early_stopping=False, top_k=70, \
         #               bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.eos_token_id, pad_token_id=tokenizer.pad_token_id)
@@ -387,7 +381,8 @@ def eval_bleu(args, model, tokenizer, file_type='test', num=2000):
                     input_ids = beam.getCurrentState()    
                     # context_mask=torch.cat((context_mask,input_ids*0+1),-1)
                     # mask=context_mask.unsqueeze(0).unsqueeze(-2).unsqueeze(-2).expand(self.config.n_layer, -1, -1, -1, -1)
-                    transformer_outputs = model(input_ids, past_key_values=past_hidden)
+                    print(len(past_hidden), past_hidden[0].shape)
+                    transformer_outputs = model(input_ids, past=past_hidden)
                     out = m(transformer_outputs[0][:, -1, :]).data
                     # out = self.lsm(self.lm_head(transformer_outputs[0][:,-1,:])).data
                     beam.advance(out)
@@ -405,11 +400,16 @@ def eval_bleu(args, model, tokenizer, file_type='test', num=2000):
                 if 0 in t:
                     t = t[:t.index(0)]
                 text = tokenizer.decode(t, clean_up_tokenization_spaces=False)
-                # print(text)
-                preds.append(text)
+                yield text
         
-        if step % args.logging_steps == 0:
+        if step % log_every == 0:
             logger.info(f"{step} are done!")
+
+
+def eval_bleu(args, model, tokenizer, file_type='test', num=2000):
+    dataset = concodeDataset(tokenizer, args, logger, file_type=file_type, block_size=args.block_size, mode='test')    
+    
+    preds = list(predict(model, tokenizer, dataset, args.device, log_every=args.logging_steps))
     
     golds = []
     datafile = os.path.join(args.data_dir, f"{file_type}.json")

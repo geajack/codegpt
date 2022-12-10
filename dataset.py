@@ -18,11 +18,6 @@ import torch
 from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
 from torch.utils.data.distributed import DistributedSampler
 
-try:
-    from torch.utils.tensorboard import SummaryWriter
-except:
-    from tensorboardX import SummaryWriter
-
 from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
                           BertConfig, BertForMaskedLM, BertTokenizer,
                           GPT2Config, GPT2LMHeadModel, GPT2Tokenizer,
@@ -32,21 +27,21 @@ from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
 
 
 class concodeDataset(Dataset):
-    def __init__(self, tokenizer, args, logger, file_type='train', block_size=512, mode='train'):
-        if args.local_rank==-1:
+    def __init__(self, data_dir, tokenizer, cache_directory, logger, overwrite_cache=False, local_rank=-1, file_type='train', block_size=512, mode='train'):
+        if local_rank==-1:
             local_rank=0
             world_size=1
         else:
-            local_rank=args.local_rank
+            local_rank=local_rank
             world_size=torch.distributed.get_world_size()
 
         self.block_size = block_size
         self.mode = mode
 
-        if not os.path.exists(args.output_dir):
-            os.makedirs(args.output_dir)
-        cached_file = os.path.join(args.output_dir, file_type+"_blocksize_%d"%(block_size)+"_wordsize_%d"%(world_size)+"_rank_%d"%(local_rank))
-        if mode != 'test' and os.path.exists(cached_file) and not args.overwrite_cache:
+        if not os.path.exists(cache_directory):
+            os.makedirs(cache_directory)
+        cached_file = os.path.join(cache_directory, file_type+"_blocksize_%d"%(block_size)+"_wordsize_%d"%(world_size)+"_rank_%d"%(local_rank))
+        if mode != 'test' and os.path.exists(cached_file) and not overwrite_cache:
             if file_type == 'train':
                 logger.warning("Loading features from cached file %s", cached_file)
             with open(cached_file, 'rb') as handle:
@@ -58,7 +53,7 @@ class concodeDataset(Dataset):
             self.inputs = []
             self.token_labels = []
 
-            datafile = os.path.join(args.data_dir, f"{file_type}.json")
+            datafile = os.path.join(data_dir, f"{file_type}.json")
             if file_type == 'train':
                 logger.warning("Creating features from dataset file at %s", datafile)
             datas = open(datafile).readlines()
