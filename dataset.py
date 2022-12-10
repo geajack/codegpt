@@ -27,7 +27,7 @@ from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
 
 
 class concodeDataset(Dataset):
-    def __init__(self, data_dir, tokenizer, cache_directory, logger, overwrite_cache=False, local_rank=-1, file_type='train', block_size=512, mode='train'):
+    def __init__(self, data_dir, tokenizer, cache_file=None, logger=None, overwrite_cache=False, local_rank=-1, file_type='train', block_size=512, mode='train'):
         if local_rank==-1:
             local_rank=0
             world_size=1
@@ -38,18 +38,12 @@ class concodeDataset(Dataset):
         self.block_size = block_size
         self.mode = mode
 
-        if not os.path.exists(cache_directory):
-            os.makedirs(cache_directory)
-        cached_file = os.path.join(cache_directory, file_type+"_blocksize_%d"%(block_size)+"_wordsize_%d"%(world_size)+"_rank_%d"%(local_rank))
-        if mode != 'test' and os.path.exists(cached_file) and not overwrite_cache:
-            if file_type == 'train':
-                logger.warning("Loading features from cached file %s", cached_file)
-            with open(cached_file, 'rb') as handle:
+        try:
+            with open(cache_file, 'rb') as handle:
                 data = pickle.load(handle)
                 self.inputs = data['inputs']
                 self.token_labels = data['token_labels']
-
-        else:
+        except FileNotFoundError:
             self.inputs = []
             self.token_labels = []
 
@@ -74,12 +68,8 @@ class concodeDataset(Dataset):
                 self.inputs.append(input_ids)
                 self.token_labels.append(input_labels)
 
-            if file_type == 'train':
-                logger.warning("Rank %d Training %d token, %d samples"%(local_rank, length, len(self.inputs)))
-                logger.warning("Saving features into cached file %s", cached_file)
-            if mode != 'test':
-                with open(cached_file, 'wb') as handle:
-                    pickle.dump({'inputs': self.inputs, 'token_labels': self.token_labels}, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            with open(cache_file, 'wb') as handle:
+                pickle.dump({'inputs': self.inputs, 'token_labels': self.token_labels}, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def pad_and_get_mask(self, code, nl, tokenizer):
         if self.mode == 'test':

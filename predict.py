@@ -40,17 +40,51 @@ if __name__ == "__main__":
     model = model_class.from_pretrained(pretrain_dir)
     model.resize_token_embeddings(len(tokenizer))
     update_config(model, tokenizer)
-    logger.info(model.config)
 
     dataset = concodeDataset(
         tokenizer=tokenizer,
         data_dir="datasets/concode",
-        cache_directory="output/cache",
+        cache_file="output/concode_test_preprocessed.pickle",
         logger=logger,
         file_type="test",
-        block_size=1024,
+        block_size=512,
         mode="test"
     )
-    predictions = list(predict(model, tokenizer, dataset, device))
+    for prediction in predict(model, tokenizer, dataset, device):
+        print(prediction)
 
-    print(predictions[0])
+    # sampler = SequentialSampler(dataset)
+    # dataloader = DataLoader(dataset, sampler=sampler, batch_size=1)
+    # for index, (batch, token_labels) in enumerate(dataloader):
+    #     if index == 88:
+    #         break
+
+    # beam_size = 10
+
+    # model.to(device)
+    # model.zero_grad()
+    # model.eval()
+
+    # beam = Beam(beam_size, tokenizer.bos_token_id, tokenizer.eos_token_id)
+    # beam_state = beam.getCurrentState()
+    # print("Beam state")
+    # print(len(beam_state))
+    # print(beam_state[0].shape)
+    # print()
+
+    # inputs = batch.to(device)
+    # print("Inputs")
+    # print(inputs.shape)
+    # print()
+
+    # with torch.no_grad():
+    #     outputs = model(inputs)[1]
+    #     print("Outputs")
+    #     print("Tuple of length", len(outputs))
+    #     print(outputs[0].shape)
+    #     print()
+        
+    #     past = [torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)],dim=0) if type(x)==tuple else x for x in outputs]
+    #     past_hidden = [x[:, 0:1].expand(-1, beam_size, -1, -1, -1) for x in past]
+    #     print("past", len(past_hidden), past[0].shape, sep=" - ")
+    #     print("past_hidden", len(past_hidden), past_hidden[0].shape, sep=" - ")

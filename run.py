@@ -381,7 +381,6 @@ def predict(model, tokenizer, dataset, device, log_every=100):
                     input_ids = beam.getCurrentState()    
                     # context_mask=torch.cat((context_mask,input_ids*0+1),-1)
                     # mask=context_mask.unsqueeze(0).unsqueeze(-2).unsqueeze(-2).expand(self.config.n_layer, -1, -1, -1, -1)
-                    print(len(past_hidden), past_hidden[0].shape)
                     transformer_outputs = model(input_ids, past=past_hidden)
                     out = m(transformer_outputs[0][:, -1, :]).data
                     # out = self.lsm(self.lm_head(transformer_outputs[0][:,-1,:])).data
@@ -402,8 +401,8 @@ def predict(model, tokenizer, dataset, device, log_every=100):
                 text = tokenizer.decode(t, clean_up_tokenization_spaces=False)
                 yield text
         
-        if step % log_every == 0:
-            logger.info(f"{step} are done!")
+        # if step % log_every == 0:
+        #     logger.info(f"{step} are done!")
 
 
 def eval_bleu(args, model, tokenizer, file_type='test', num=2000):
