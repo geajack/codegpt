@@ -338,68 +338,6 @@ def evaluate(args, model, tokenizer, prefix="", eval_when_training=False):
             writer.write("%s = %s\n" % (key, str(result[key])))
 
     return result
-
-
-def predict(model, tokenizer, dataset, device, log_every=100):
-    sampler = SequentialSampler(dataset)
-    dataloader = DataLoader(dataset, sampler=sampler, batch_size=1)
-
-    model.to(device)
-    model.zero_grad()
-    model.eval()
-
-    preds = []
-    max_gen_len = 100
-    for step, (batch, token_labels) in enumerate(dataloader):
-        inputs = batch.to(device)
-        # with torch.no_grad():
-        #     outputs = model.generate(inputs, max_length=args.block_size, num_beams=10, temperature=0.7, early_stopping=False, top_k=70, \
-        #               bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.eos_token_id, pad_token_id=tokenizer.pad_token_id)
-        #     # outputs = model.generate(inputs, max_length=args.block_size, do_sample=True, temperature=0.7, top_k=70, top_p=0.95, \
-        #     #         bos_token_id=tokenizer.bos_token_id, eos_token_id=tokenizer.pad_token_id, pad_token_id=tokenizer.pad_token_id)
-        #     # outputs = model.generate(inputs, max_length=args.block_size, num_beams=10, temperature=0.7, early_stopping=False, top_k=70)
-        #     # outputs = model.generate(inputs, max_length=args.block_size, do_sample=True, temperature=0.7, top_k=70, top_p=0.95)
-        #     generation = tokenizer.decode(outputs[0])[len(tokenizer.decode(inputs[0])):]
-        #     preds.append(generation.rstrip("<pad>"))
-        
-        with torch.no_grad():
-            beam_size = 10
-            m = torch.nn.LogSoftmax(dim=-1)
-            outputs = model(inputs)[1]
-            p = []       
-            zero = torch.cuda.LongTensor(1).fill_(0)
-            for i in range(inputs.shape[0]):
-                # Compatible with transformers version 3.3.0 and 4.13.0
-                past = [torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)],dim=0) if type(x)==tuple else x for x in outputs]
-                past_hidden = [x[:, i:i+1].expand(-1, beam_size, -1, -1, -1) for x in past]
-                # context_mask=source_mask[i:i+1,:].expand(beam_size,-1)
-                beam = Beam(beam_size, tokenizer.bos_token_id, tokenizer.eos_token_id)
-                input_ids = None
-                for _ in range(max_gen_len): 
-                    if beam.done():
-                        break
-                    input_ids = beam.getCurrentState()    
-                    # context_mask=torch.cat((context_mask,input_ids*0+1),-1)
-                    # mask=context_mask.unsqueeze(0).unsqueeze(-2).unsqueeze(-2).expand(self.config.n_layer, -1, -1, -1, -1)
-                    transformer_outputs = model(input_ids, past=past_hidden)
-                    out = m(transformer_outputs[0][:, -1, :]).data
-                    # out = self.lsm(self.lm_head(transformer_outputs[0][:,-1,:])).data
-                    beam.advance(out)
-                    past = [torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)],dim=0) if type(x)==tuple else x for x in transformer_outputs[1]]
-                    past_hidden = [x.data.index_select(1, beam.getCurrentOrigin()) for x in past]
-                hyp = beam.getHyp(beam.getFinal())
-                pred  =beam.buildTargetTokens(hyp)[:beam_size]
-
-                pred = [torch.cat([x.view(-1) for x in p]+[zero]*(max_gen_len-len(p))).view(1,-1) for p in pred]
-                p.append(torch.cat(pred, 0).unsqueeze(0))
-            p = torch.cat(p, 0)
-            for pred in p:
-                t = pred[0].cpu().numpy()
-                t = list(t)
-                if 0 in t:
-                    t = t[:t.index(0)]
-                text = tokenizer.decode(t, clean_up_tokenization_spaces=False)
-                yield text
         
         # if step % log_every == 0:
         #     logger.info(f"{step} are done!")
