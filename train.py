@@ -26,7 +26,7 @@ def train(
     n_gpu=1,
     gradient_accumulation_steps=2,
     max_steps=-1,
-    num_train_epochs=30,
+    n_epochs=30,
     weight_decay=0.01,
     learning_rate=5e-5,
     adam_epsilon=1e-8,
@@ -55,8 +55,8 @@ def train(
     # if max_steps > 0:
     #     t_total = max_steps
     #     num_train_epochs = max_steps // (len(train_dataloader) // gradient_accumulation_steps) + 1
-    if num_train_epochs > 0:
-        t_total = total_examples // batch_size * num_train_epochs
+    if n_epochs > 0:
+        t_total = total_examples // batch_size * n_epochs
     max_steps = t_total
     model.to(device)
     if local_rank not in [-1, 0]:
@@ -100,16 +100,18 @@ def train(
     print("  Gradient Accumulation steps = %d", gradient_accumulation_steps)
     print("  Total optimization steps = %d", t_total)
     
-    global_step = 0
+    n_weight_updates = 0
+    n_batches_per_epoch = len(train_dataloader)
     tr_loss, logging_loss,avg_loss,tr_nb = 0.0, 0.0,0.0,0
     # model.resize_token_embeddings(len(tokenizer))
     model.zero_grad()
     set_seed(seed)  # Added here for reproducibility (even between python 2 and 3)
 
     best_bleu = 0.0
+    do_stop = False
  
-    for idx in range(0, int(num_train_epochs)): 
-        for step, (batch, token_labels) in enumerate(train_dataloader):
+    for epoch_index in range(0, int(n_epochs)): 
+        for batch_index, (batch, token_labels) in enumerate(train_dataloader):
             inputs = batch.to(device)
             attn_mask = torch.tensor(token_labels.clone().detach() != 0, dtype=torch.uint8, device=device)
             loss_mask = torch.tensor(token_labels.clone().detach() == 2, dtype=torch.uint8, device=device)
@@ -137,26 +139,39 @@ def train(
 
             tr_loss += loss.item()
                 
-            if (step + 1) % gradient_accumulation_steps == 0:
+            if (batch_index + 1) % gradient_accumulation_steps == 0:
                 optimizer.step()
                 optimizer.zero_grad()
-                scheduler.step()  
-                global_step += 1
+                scheduler.step()
+                n_weight_updates += 1
                 output_flag=True
-                avg_loss=round(np.exp((tr_loss - logging_loss) /(global_step- tr_nb)),4)
-                if global_step % logging_steps == 0:
-                    print("  steps: %s  ppl: %s", global_step, round(avg_loss,5))
-                if local_rank in [-1, 0] and logging_steps > 0 and global_step % logging_steps == 0:
+                avg_loss=round(np.exp((tr_loss - logging_loss) /(n_weight_updates- tr_nb)),4)
+                if n_weight_updates % logging_steps == 0:
+                    print("  steps: %s  ppl: %s", n_weight_updates, round(avg_loss,5))
+                if local_rank in [-1, 0] and logging_steps > 0 and n_weight_updates % logging_steps == 0:
                     # Log metrics
-                    tb_writer.add_scalar('lr', scheduler.get_last_lr()[0], global_step)
-                    tb_writer.add_scalar('loss', (tr_loss - logging_loss) / logging_steps, global_step)
+                    tb_writer.add_scalar('lr', scheduler.get_last_lr()[0], n_weight_updates)
+                    tb_writer.add_scalar('loss', (tr_loss - logging_loss) / logging_steps, n_weight_updates)
                     logging_loss = tr_loss
-                    tr_nb=global_step
+                    tr_nb=n_weight_updates
 
-                if local_rank in [-1, 0] and save_steps > 0 and global_step % save_steps == 0:
+                do_save = False
+                if local_rank in (-1, 0):
+                    if save_steps > 0 and n_weight_updates % save_steps == 0:
+                        do_save = True
+                    if epoch_index == n_epochs - 1:
+                        index_of_last_weight_update = (n_batches_per_epoch // gradient_accumulation_steps) * gradient_accumulation_steps - 1
+                        if batch_index == index_of_last_weight_update:
+                            do_save = True
+
+                if max_steps > 0 and n_weight_updates > max_steps:
+                    do_save = True
+                    do_stop = True
+
+                if do_save:
                     checkpoint_prefix = "checkpoint"
                     # Save model checkpoint
-                    output_dir = os.path.join(output_dir, "{}-{}".format(checkpoint_prefix, global_step))
+                    output_dir = os.path.join(output_dir, "{}-{}".format(checkpoint_prefix, n_weight_updates))
                     if not os.path.exists(output_dir):
                         os.makedirs(output_dir)
                     model_to_save = (
@@ -165,7 +180,7 @@ def train(
                     model_to_save.save_pretrained(output_dir)
                     tokenizer.save_pretrained(output_dir)
 
-                    torch.save( os.path.join(output_dir, "training_bin"))
+                    # torch.save(args, os.path.join(output_dir, "training_args.bin"))
                     print("Saving model checkpoint to %s", output_dir)
 
                     # _rotate_checkpoints( checkpoint_prefix)
@@ -184,22 +199,22 @@ def train(
 
                     step_file = os.path.join(last_output_dir, 'step_file.txt')
                     with open(step_file, 'w', encoding='utf-8') as stepf:
-                        stepf.write(str(global_step) + '\n')
+                        stepf.write(str(n_weight_updates) + '\n')
 
                     # torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                     # torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
                     # print("Saving optimizer and scheduler states to %s", output_dir)
                     
 
-            if max_steps > 0 and global_step > max_steps:
+            if do_stop:
                 break
-        if max_steps > 0 and global_step > max_steps:
+        if do_stop:
             break
 
     if local_rank in [-1, 0]:
         tb_writer.close()
 
-    return global_step, tr_loss / global_step
+    return n_weight_updates, tr_loss / n_weight_updates
 
 
 if __name__ == "__main__":
