@@ -8,6 +8,44 @@ import torch
 from torch.utils.data import Dataset
 
 
+def codexglue_datasource(filepath):
+    with open(filepath, "r") as file:
+        lines = file.readlines()
+
+    for line in lines:
+        data = json.loads(line)
+        yield data["nl"], data["code"]
+
+
+def preprocess(datasource, tokenizer, mode, block_size=512):
+    for nl, code in datasource:
+        nl_tokens = tokenizer.encode(nl)
+        code_tokens = tokenizer.encode(code)
+
+        if mode == "test":
+            assert len(code_tokens) == 0
+        
+        while (len(code_tokens) + len(nl_tokens) + 2 > block_size):
+            if (len(code_tokens) > len(nl_tokens)):
+                code_tokens = code_tokens[:-1]
+            else:
+                nl_tokens = nl_tokens[:-1]
+        
+        inputs = nl_tokens + [tokenizer.bos_token_id]
+        labels = [1] * len(nl_tokens) + [2]
+
+        if mode == "train":
+            inputs += code_tokens + [tokenizer.eos_token_id]
+            labels += [2] * len(code_tokens) + [0]
+            assert len(inputs) <= block_size
+            pad_len = block_size - len(inputs)
+            inputs += [tokenizer.pad_token_id] * pad_len
+            labels += [0] * pad_len
+            assert len(inputs) == len(labels), (len(inputs), len(labels))
+
+        yield inputs, labels
+
+
 class concodeDataset(Dataset):
     def __init__(self, datafile, tokenizer, cache_file=None, logger=None, use_cache=False, local_rank=-1, block_size=512, mode='train'):
         if local_rank==-1:
@@ -24,40 +62,9 @@ class concodeDataset(Dataset):
         self.token_labels = []
         self.tokenizer = tokenizer
 
-        datas = open(datafile).readlines()
+        datasource = codexglue_datasource(datafile)
 
-        length = len(datas)
-        logger.info("Data size: %d"%(length))
-        for idx, x in enumerate(datas):
-            # if idx % (length//10) == 0:
-            #     percent = idx / (length//10) * 10
-            #     logger.warning("Rank %d, load %d"%(local_rank, percent))
-            if idx % world_size != local_rank:
-                continue
-            x = json.loads(x)
-            code = tokenizer.encode(x["code"])
-            nl = tokenizer.encode(x["nl"])
-
-            if mode == 'test':
-                assert len(code) == 0
-            
-            while (len(code) + len(nl) + 2 > block_size):
-                if (len(code) > len(nl)):
-                    code = code[:-1]
-                else:
-                    nl = nl[:-1]
-            inputs = nl + [tokenizer.bos_token_id]
-            labels = [1] * len(nl) + [2]
-
-            if mode == 'train':
-                inputs += code + [tokenizer.eos_token_id]
-                labels += [2] * len(code) + [0]
-                assert len(inputs) <= block_size
-                pad_len = block_size - len(inputs)
-                inputs += [tokenizer.pad_token_id] * pad_len
-                labels += [0] * pad_len
-                assert len(inputs) == len(labels), (len(inputs), len(labels))
-            
+        for inputs, labels in preprocess(datasource, tokenizer=tokenizer, mode=mode, block_size=block_size):
             self.inputs.append(inputs)
             self.token_labels.append(labels)
             
