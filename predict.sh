@@ -3,4 +3,4 @@
 #SBATCH --mem 64000
 #SBATCH --partition LARGE-G2
 
-python predict.py
+PYTHONUNBUFFERED=1 python predict.py
