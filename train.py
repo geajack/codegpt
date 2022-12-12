@@ -18,7 +18,6 @@ def train(
     model,
     tokenizer,
     output_dir,
-    tensorboard_dir=None,
     device="cuda",
     batch_size=512,
     local_rank=-1,
@@ -171,17 +170,17 @@ def train(
                 if do_save:
                     checkpoint_prefix = "checkpoint"
                     # Save model checkpoint
-                    output_dir = os.path.join(output_dir, "{}-{}".format(checkpoint_prefix, n_weight_updates))
-                    if not os.path.exists(output_dir):
-                        os.makedirs(output_dir)
+                    checkpoint_dir = os.path.join(output_dir, "{}-{}".format(checkpoint_prefix, n_weight_updates))
+                    if not os.path.exists(checkpoint_dir):
+                        os.makedirs(checkpoint_dir)
                     model_to_save = (
                         model.module if hasattr(model, "module") else model
                     )  # Take care of distributed/parallel training
-                    model_to_save.save_pretrained(output_dir)
-                    tokenizer.save_pretrained(output_dir)
+                    model_to_save.save_pretrained(checkpoint_dir)
+                    tokenizer.save_pretrained(checkpoint_dir)
 
                     # torch.save(args, os.path.join(output_dir, "training_args.bin"))
-                    print("Saving model checkpoint to %s", output_dir)
+                    print("Saving model checkpoint to %s", checkpoint_dir)
 
                     # _rotate_checkpoints( checkpoint_prefix)
                     last_output_dir = os.path.join(output_dir, 'checkpoint-last')
@@ -236,7 +235,7 @@ if __name__ == "__main__":
         dataset,
         model,
         tokenizer,
-        "../models/concode_testing",
-        device=device,
-        tensorboard_dir="../models/concode_testing/tensorboard"
+        "/home/ICTDOMAIN/d20126116/Code/CodeGPT/models/concode_testing",
+        n_epochs=1,
+        device=device
     )
