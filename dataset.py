@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation.
-# Licensed under the MIT License.
+#!/home/ICTDOMAIN/d20126116/Code/CodeGPT/pyenv/bin/python
+
 from __future__ import absolute_import, division, print_function
 
 import os
@@ -83,3 +83,32 @@ class concodeDataset(Dataset):
 
     def __getitem__(self, item):
         return torch.tensor(self.inputs[item]), torch.tensor(self.token_labels[item])
+
+
+if __name__ == "__main__":
+    import logging
+    from run import MODEL_CLASSES
+
+    logger = logging.getLogger(__name__)
+
+    _, _, tokenizer_class = MODEL_CLASSES["gpt2"]
+
+    tokenizer = tokenizer_class.from_pretrained(
+        "microsoft/CodeGPT-small-java-adaptedGPT2",
+        do_lower_case=False,
+        bos_token="<s>",
+        eos_token="</s>",
+        pad_token="<pad>",
+        unk_token="<|UNKNOWN|>",
+        sep_token="concode_elem_sep"
+    )
+
+    dataset = concodeDataset(
+        tokenizer=tokenizer,
+        data_dir="datasets/concode",
+        cache_file="output/concode_test_preprocessed.pickle",
+        logger=logger,
+        file_type="test",
+        block_size=512,
+        mode="test"
+    )
