@@ -33,6 +33,12 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
 from torch.utils.data.distributed import DistributedSampler
+
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except:
+    from tensorboardX import SummaryWriter
+
 from dataset import CodeGPTDataset
 from beam import Beam
 
@@ -59,8 +65,13 @@ MODEL_CLASSES = {
 
 
 def load_and_cache_examples(args, tokenizer, evaluate=False):
-    dataset = concodeDataset(tokenizer, args, logger, file_type='dev' if evaluate else 'train',
-                          block_size=args.block_size)
+    split = "dev" if evaluate else "train"
+    dataset = CodeGPTDataset(
+        filepath="datasets/concode/" + split + ".json",
+        mode=split,
+        tokenizer=tokenizer,
+        block_size=args.block_size
+    )
     return dataset
 
 
@@ -152,7 +163,7 @@ def train(args, train_dataset, model, tokenizer, fh, pool):
     tr_loss, logging_loss,avg_loss,tr_nb = 0.0, 0.0,0.0,0
     # model.resize_token_embeddings(len(tokenizer))
     model.zero_grad()
-    set_seed(args)  # Added here for reproducibility (even between python 2 and 3)
+    set_seed(args.seed)  # Added here for reproducibility (even between python 2 and 3)
 
     best_bleu = 0.0
  
@@ -344,7 +355,7 @@ def evaluate(args, model, tokenizer, prefix="", eval_when_training=False):
 
 
 def eval_bleu(args, model, tokenizer, file_type='test', num=2000):
-    dataset = concodeDataset(tokenizer, args, logger, file_type=file_type, block_size=args.block_size, mode='test')    
+    dataset = CodeGPTDataset(tokenizer, args, logger, file_type=file_type, block_size=args.block_size, mode='test')    
     
     preds = list(predict(model, tokenizer, dataset, args.device, log_every=args.logging_steps))
     
@@ -525,7 +536,7 @@ def main():
     logger.addHandler(fh)
 
     # Set seed
-    set_seed(args)
+    set_seed(args.seed)
 
     # Load pretrained model and tokenizer
     if args.local_rank not in [-1, 0]:

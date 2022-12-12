@@ -5,9 +5,9 @@
 
 LANG=java
 DATADIR=../dataset/concode
-OUTPUTDIR=../save/concode
+OUTPUTDIR=../models/concode_testing
 PRETRAINDIR=microsoft/CodeGPT-small-java-adaptedGPT2    # will download pre-trained CodeGPT model
-LOGFILE=text2code_concode.log
+LOGFILE=output/text2code_concode.log
 PER_NODE_GPU=0       # modify YOUR_GPU_NUM
 
 python3 run.py \
