@@ -1,7 +1,5 @@
-import sys
 import torch
-from   torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
-from   torch.utils.data.distributed import DistributedSampler
+from   torch.utils.data import DataLoader, SequentialSampler
 from   beam import Beam
 from model import get_gpt2
 
@@ -70,47 +68,3 @@ if __name__ == "__main__":
     )
     for prediction in predict(model, tokenizer, dataset, device):
         print(prediction)
-
-    # model.to(device)
-    # model.zero_grad()
-    # model.eval()
-
-    # sentence, labels = dataset[88]
-    # print(sentence.shape)
-    # predict_single(sentence[None], model, tokenizer)
-
-    # sampler = SequentialSampler(dataset)
-    # dataloader = DataLoader(dataset, sampler=sampler, batch_size=1)
-    # for index, (batch, token_labels) in enumerate(dataloader):
-    #     if index == 88:
-    #         break
-
-    # beam_size = 10
-
-    # model.to(device)
-    # model.zero_grad()
-    # model.eval()
-
-    # beam = Beam(beam_size, tokenizer.bos_token_id, tokenizer.eos_token_id)
-    # beam_state = beam.getCurrentState()
-    # print("Beam state")
-    # print(len(beam_state))
-    # print(beam_state[0].shape)
-    # print()
-
-    # inputs = batch.to(device)
-    # print("Inputs")
-    # print(inputs.shape)
-    # print()
-
-    # with torch.no_grad():
-    #     outputs = model(inputs)[1]
-    #     print("Outputs")
-    #     print("Tuple of length", len(outputs))
-    #     print(outputs[0].shape)
-    #     print()
-        
-    #     past = [torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)],dim=0) if type(x)==tuple else x for x in outputs]
-    #     past_hidden = [x[:, 0:1].expand(-1, beam_size, -1, -1, -1) for x in past]
-    #     print("past", len(past_hidden), past[0].shape, sep=" - ")
-    #     print("past_hidden", len(past_hidden), past_hidden[0].shape, sep=" - ")
