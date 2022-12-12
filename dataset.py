@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 
 class concodeDataset(Dataset):
-    def __init__(self, data_dir, tokenizer, cache_file=None, logger=None, use_cache=False, local_rank=-1, file_type='train', block_size=512, mode='train'):
+    def __init__(self, datafile, tokenizer, cache_file=None, logger=None, use_cache=False, local_rank=-1, block_size=512, mode='train'):
         if local_rank==-1:
             local_rank=0
             world_size=1
@@ -22,8 +22,8 @@ class concodeDataset(Dataset):
         
         self.inputs = []
         self.token_labels = []
+        self.tokenizer = tokenizer
 
-        datafile = os.path.join(data_dir, f"{file_type}.json")
         datas = open(datafile).readlines()
 
         length = len(datas)
@@ -38,10 +38,10 @@ class concodeDataset(Dataset):
             code = tokenizer.encode(x["code"])
             nl = tokenizer.encode(x["nl"])
 
-            if self.mode == 'test':
-                code = []
+            if mode == 'test':
+                assert len(code) == 0
             
-            while (len(code) + len(nl) + 2 > self.block_size):
+            while (len(code) + len(nl) + 2 > block_size):
                 if (len(code) > len(nl)):
                     code = code[:-1]
                 else:
@@ -49,11 +49,11 @@ class concodeDataset(Dataset):
             inputs = nl + [tokenizer.bos_token_id]
             labels = [1] * len(nl) + [2]
 
-            if self.mode == 'train':
+            if mode == 'train':
                 inputs += code + [tokenizer.eos_token_id]
                 labels += [2] * len(code) + [0]
-                assert len(inputs) <= self.block_size
-                pad_len = self.block_size - len(inputs)
+                assert len(inputs) <= block_size
+                pad_len = block_size - len(inputs)
                 inputs += [tokenizer.pad_token_id] * pad_len
                 labels += [0] * pad_len
                 assert len(inputs) == len(labels), (len(inputs), len(labels))
@@ -65,6 +65,12 @@ class concodeDataset(Dataset):
     def save(self, filepath):
         with open(filepath, "wb") as handle:
             pickle.dump({'inputs': self.inputs, 'token_labels': self.token_labels}, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def save_debug(self, filepath):
+        with open(filepath, "w") as handle:
+            for tokens in self.inputs:
+                output = [tokenizer.decode(token).strip() for token in tokens]
+                print(*output, sep="|", file=handle)
 
     def __len__(self):
         return len(self.inputs)
@@ -93,9 +99,8 @@ if __name__ == "__main__":
 
     test_dataset = concodeDataset(
         tokenizer=tokenizer,
-        data_dir="datasets/miniconcode",
+        datafile="datasets/miniconcode/test.json",
         logger=logger,
-        file_type="test",
         block_size=512,
         mode="test"
     )
@@ -105,9 +110,8 @@ if __name__ == "__main__":
 
     train_dataset = concodeDataset(
         tokenizer=tokenizer,
-        data_dir="datasets/miniconcode",
+        datafile="datasets/miniconcode/train.json",
         logger=logger,
-        file_type="train",
         block_size=512,
         mode="train"
     )
