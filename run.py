@@ -33,7 +33,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
 from torch.utils.data.distributed import DistributedSampler
-from dataset import concodeDataset
+from dataset import CodeGPTDataset
 from beam import Beam
 
 from torch.nn import CrossEntropyLoss

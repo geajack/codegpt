@@ -46,23 +46,21 @@ def preprocess(datasource, tokenizer, mode, block_size=512):
         yield inputs, labels
 
 
-class concodeDataset(Dataset):
-    def __init__(self, datafile, tokenizer, cache_file=None, logger=None, use_cache=False, local_rank=-1, block_size=512, mode='train'):
+class CodeGPTDataset(Dataset):
+
+    def __init__(self, filepath, mode, tokenizer, local_rank=-1, block_size=512):
         if local_rank==-1:
             local_rank=0
             world_size=1
         else:
             local_rank=local_rank
             world_size=torch.distributed.get_world_size()
-
-        self.block_size = block_size
-        self.mode = mode
         
         self.inputs = []
         self.token_labels = []
         self.tokenizer = tokenizer
 
-        datasource = codexglue_datasource(datafile)
+        datasource = codexglue_datasource(filepath)
 
         for inputs, labels in preprocess(datasource, tokenizer=tokenizer, mode=mode, block_size=block_size):
             self.inputs.append(inputs)
@@ -104,10 +102,9 @@ if __name__ == "__main__":
         sep_token="concode_elem_sep"
     )
 
-    test_dataset = concodeDataset(
+    test_dataset = CodeGPTDataset(
         tokenizer=tokenizer,
-        datafile="datasets/miniconcode/test.json",
-        logger=logger,
+        filepath="datasets/miniconcode/test.json",
         block_size=512,
         mode="test"
     )
@@ -115,10 +112,9 @@ if __name__ == "__main__":
     test_dataset.save("output/miniconcode_test_preprocessed.pickle")
     del test_dataset
 
-    train_dataset = concodeDataset(
+    train_dataset = CodeGPTDataset(
         tokenizer=tokenizer,
-        datafile="datasets/miniconcode/train.json",
-        logger=logger,
+        filepath="datasets/miniconcode/train.json",
         block_size=512,
         mode="train"
     )
