@@ -5,7 +5,7 @@ from   torch.utils.data.distributed import DistributedSampler
 from   beam import Beam
 from model import get_gpt2
 
-from dataset import concodeDataset
+from dataset import CodeGPTDataset
 
 
 def predict_single(batch, model, tokenizer, max_gen_len=100):
@@ -60,17 +60,14 @@ def predict(model, tokenizer, dataset, device, log_every=100):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model, tokenizer = get_gpt2()
+    model, tokenizer = get_gpt2("/home/ICTDOMAIN/d20126116/Code/CodeGPT/models/concode_testing/checkpoint-last")
 
-    dataset = concodeDataset(
+    dataset = CodeGPTDataset(
         tokenizer=tokenizer,
-        data_dir="datasets/concode",
-        cache_file="output/concode_test_preprocessed.pickle",
-        file_type="test",
+        filepath="datasets/miniconcode/test.json",
         block_size=512,
         mode="test"
     )
-
     for prediction in predict(model, tokenizer, dataset, device):
         print(prediction)
 
