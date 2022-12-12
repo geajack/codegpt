@@ -1,5 +1,3 @@
-#!/home/ICTDOMAIN/d20126116/Code/CodeGPT/pyenv/bin/python
-
 from __future__ import absolute_import, division, print_function
 
 import os
@@ -31,9 +29,9 @@ class concodeDataset(Dataset):
         length = len(datas)
         logger.info("Data size: %d"%(length))
         for idx, x in enumerate(datas):
-            if idx % (length//10) == 0:
-                percent = idx / (length//10) * 10
-                logger.warning("Rank %d, load %d"%(local_rank, percent))
+            # if idx % (length//10) == 0:
+            #     percent = idx / (length//10) * 10
+            #     logger.warning("Rank %d, load %d"%(local_rank, percent))
             if idx % world_size != local_rank:
                 continue
             x = json.loads(x)
@@ -102,7 +100,7 @@ if __name__ == "__main__":
         mode="test"
     )
 
-    test_dataset.save("output/concode_test_preprocessed.pickle")
+    test_dataset.save("output/miniconcode_test_preprocessed.pickle")
     del test_dataset
 
     train_dataset = concodeDataset(
@@ -114,5 +112,5 @@ if __name__ == "__main__":
         mode="train"
     )
 
-    train_dataset.save("output/concode_train_preprocessed.pickle")
+    train_dataset.save("output/miniconcode_train_preprocessed.pickle")
     del train_dataset
