@@ -3,7 +3,7 @@ from   torch.utils.data import DataLoader, SequentialSampler
 from   beam import Beam
 from model import get_gpt2
 
-from dataset import CodeGPTDataset
+from dataset import CodeGPTDataset, conala_datasource
 
 
 def predict_single(batch, model, tokenizer, max_gen_len=100):
@@ -58,11 +58,12 @@ def predict(model, tokenizer, dataset, device, log_every=100):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model, tokenizer = get_gpt2("/home/ICTDOMAIN/d20126116/Code/CodeGPT/models/concode_testing/checkpoint-last")
+    model, tokenizer = get_gpt2("microsoft/CodeGPT-small-py-adaptedGPT2")
 
+    datasource = conala_datasource("datasets/conala/conala-test.json")
     dataset = CodeGPTDataset(
         tokenizer=tokenizer,
-        filepath="datasets/miniconcode/test.json",
+        datasource=datasource,
         block_size=512,
         mode="test"
     )

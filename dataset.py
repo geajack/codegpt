@@ -17,13 +17,25 @@ def codexglue_datasource(filepath):
         yield data["nl"], data["code"]
 
 
+def conala_datasource(filepath):
+    with open(filepath) as file:
+        data = json.load(file)
+
+    for entry in data:
+        nl = entry["rewritten_intent"]
+        if not nl:
+            nl = entry["intent"]
+        code = entry["snippet"]
+        yield nl, code
+
+
 def preprocess(datasource, tokenizer, mode, block_size=512):
     for nl, code in datasource:
         nl_tokens = tokenizer.encode(nl)
         code_tokens = tokenizer.encode(code)
 
         if mode == "test":
-            assert len(code_tokens) == 0
+            code_tokens = []
         
         while (len(code_tokens) + len(nl_tokens) + 2 > block_size):
             if (len(code_tokens) > len(nl_tokens)):
@@ -48,7 +60,7 @@ def preprocess(datasource, tokenizer, mode, block_size=512):
 
 class CodeGPTDataset(Dataset):
 
-    def __init__(self, filepath, mode, tokenizer, local_rank=-1, block_size=512):
+    def __init__(self, datasource, mode, tokenizer, local_rank=-1, block_size=512):
         if local_rank==-1:
             local_rank=0
             world_size=1
@@ -59,8 +71,6 @@ class CodeGPTDataset(Dataset):
         self.inputs = []
         self.token_labels = []
         self.tokenizer = tokenizer
-
-        datasource = codexglue_datasource(filepath)
 
         for inputs, labels in preprocess(datasource, tokenizer=tokenizer, mode=mode, block_size=block_size):
             self.inputs.append(inputs)

@@ -2,7 +2,7 @@ import torch
 
 from run import set_seed, MODEL_CLASSES, update_config
 
-def get_gpt2(weights="microsoft/CodeGPT-small-java-adaptedGPT2"):
+def get_gpt2(weights):
     model_type   = "gpt2"
     local_rank = -1
     

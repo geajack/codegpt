@@ -19,7 +19,6 @@ def train(
     tokenizer,
     output_dir,
     device="cuda",
-    batch_size=512,
     local_rank=-1,
     per_gpu_train_batch_size=6,
     n_gpu=1,
