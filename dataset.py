@@ -48,34 +48,31 @@ class concodeDataset(Dataset):
                 code = tokenizer.encode(x["code"])
                 nl = tokenizer.encode(x["nl"])
 
-                input_ids, input_labels = self.pad_and_get_mask(code, nl, tokenizer)
-                self.inputs.append(input_ids)
-                self.token_labels.append(input_labels)
+                if self.mode == 'test':
+                    code = []
+                
+                while (len(code) + len(nl) + 2 > self.block_size):
+                    if (len(code) > len(nl)):
+                        code = code[:-1]
+                    else:
+                        nl = nl[:-1]
+                inputs = nl + [tokenizer.bos_token_id]
+                labels = [1] * len(nl) + [2]
+
+                if self.mode == 'train':
+                    inputs += code + [tokenizer.eos_token_id]
+                    labels = [2] * len(code) + [0]
+                    assert len(inputs) <= self.block_size
+                    pad_len = self.block_size - len(inputs)
+                    inputs += [tokenizer.pad_token_id] * pad_len
+                    labels += [0] * pad_len
+                    assert len(inputs) == len(labels)
+                
+                self.inputs.append(inputs)
+                self.token_labels.append(labels)
 
             with open(cache_file, 'wb') as handle:
                 pickle.dump({'inputs': self.inputs, 'token_labels': self.token_labels}, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    def pad_and_get_mask(self, code, nl, tokenizer):
-        if self.mode == 'test':
-            code = []
-        while (len(code) + len(nl) + 2 > self.block_size):
-            if (len(code) > len(nl)):
-                code = code[:-1]
-            else:
-                nl = nl[:-1]
-        if self.mode == 'train':
-            inputs = nl + [tokenizer.bos_token_id] + code + [tokenizer.eos_token_id]
-            labels = [1] * len(nl) + [2] * (len(code)+1) + [0]
-        else:
-            inputs = nl + [tokenizer.bos_token_id]
-            labels = [1] * len(nl) + [2]
-            return inputs, labels
-        assert len(inputs) <= self.block_size
-        pad_len = self.block_size - len(inputs)
-        inputs += [tokenizer.pad_token_id] * pad_len
-        labels += [0] * pad_len
-        assert len(inputs) == len(labels)
-        return inputs, labels
 
 
     def __len__(self):
