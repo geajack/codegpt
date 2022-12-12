@@ -3,9 +3,8 @@ import torch
 from   torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
 from   torch.utils.data.distributed import DistributedSampler
 from   beam import Beam
-import logging
+from model import get_gpt2
 
-from run     import set_seed, MODEL_CLASSES, update_config
 from dataset import concodeDataset
 
 
@@ -59,43 +58,14 @@ def predict(model, tokenizer, dataset, device, log_every=100):
 
 
 if __name__ == "__main__":
-    model_type   = "gpt2"
-    pretrain_dir = "microsoft/CodeGPT-small-java-adaptedGPT2"
-    pretrain_dir = "../models/concode"
-    local_rank = -1
-    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    n_gpu = torch.cuda.device_count()
 
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.INFO
-    )
-    logger.addHandler(logging.FileHandler("output/logs"))
-
-    set_seed(0)
-
-    config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
-    tokenizer = tokenizer_class.from_pretrained(
-        pretrain_dir,
-        do_lower_case=False,
-        bos_token="<s>",
-        eos_token="</s>",
-        pad_token="<pad>",
-        unk_token="<|UNKNOWN|>",
-        sep_token="concode_elem_sep"
-    )
-    model = model_class.from_pretrained(pretrain_dir)
-    model.resize_token_embeddings(len(tokenizer))
-    update_config(model, tokenizer)
+    model, tokenizer = get_gpt2()
 
     dataset = concodeDataset(
         tokenizer=tokenizer,
         data_dir="datasets/concode",
         cache_file="output/concode_test_preprocessed.pickle",
-        logger=logger,
         file_type="test",
         block_size=512,
         mode="test"
