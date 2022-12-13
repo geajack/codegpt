@@ -6,10 +6,17 @@ from torch.utils.data import DataLoader, RandomSampler
 from tensorboardX import SummaryWriter
 from transformers import WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup
 import numpy as np
+import random
 
-from run import set_seed
-from model import get_gpt2
-from dataset import CodeGPTDataset, conala_datasource
+from config import read_config
+
+
+def set_seed(seed, multiple_gpus=False):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if multiple_gpus:
+        torch.cuda.manual_seed_all(seed)
 
 
 def train(
@@ -17,7 +24,6 @@ def train(
     model,
     tokenizer,
     output_dir,
-    device="cuda",
     local_rank=-1,
     per_gpu_train_batch_size=6,
     n_gpu=1,
@@ -34,7 +40,8 @@ def train(
     logging_steps=100,
     save_steps=5000
 ):
-    """ Train the model """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     if local_rank in [-1, 0]:
         tensorboard_dir = os.path.join(output_dir, 'tensorboard')
         if not os.path.exists(tensorboard_dir):
@@ -215,26 +222,24 @@ def train(
 
 
 if __name__ == "__main__":
-    print("Running train.py")
+    from sys import argv
+    from pathlib import Path
+    from datetime import datetime
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    model, tokenizer = get_gpt2("microsoft/CodeGPT-small-py-adaptedGPT2")
+    config_path = argv[1]
+    print("Running train.py", config_path)
 
-    print("Loading dataset")
-    dataset = CodeGPTDataset(
-        tokenizer=tokenizer,
-        datasource=conala_datasource("datasets/conala/train.json"),
-        block_size=512,
-        mode="train"
-    )
+    model, tokenizer, dataset, config_name = read_config(config_path, "train")
+
+    model_home = Path("/home/ICTDOMAIN/d20126116/Code/CodeGPT/models")
+    now = datetime.now().strftime("%d-%m-%y@%H:%M:%S")
+    output_directory_name = f"{config_name}-{now}"
+    output_directory = (model_home / output_directory_name).absolute()
 
     print("Beginning training")
     train(
         dataset,
         model,
         tokenizer,
-        "/home/ICTDOMAIN/d20126116/Code/CodeGPT/models/conala",
-        n_epochs=30,
-        device=device
+        output_directory
     )

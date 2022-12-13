@@ -1,0 +1,6 @@
+dataset:
+  file: miniconcode/train.json
+  format: codexglue
+model:
+  uri: microsoft/CodeGPT-small-java-adaptedGPT2
+  source: huggingface
