@@ -30,7 +30,8 @@ def read_config(path, mode):
 
     datasource_types = {
         "codexglue": codexglue_datasource,
-        "conala"   : conala_datasource
+        "conala"   : conala_datasource,
+        "mbpp"     : mbpp_datasource
     }
     datasource = datasource_types[data_format](full_dataset_path)
 

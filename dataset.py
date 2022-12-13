@@ -26,6 +26,15 @@ def conala_datasource(filepath):
         yield nl, code
 
 
+def mbpp_datasource(filepath):
+    with open(filepath, "r") as file:
+        lines = file.readlines()
+
+    for line in lines:
+        data = json.loads(line)
+        yield data["text"], data["code"]
+
+
 def preprocess(datasource, tokenizer, mode, block_size=512):
     for nl, code in datasource:
         nl_tokens = tokenizer.encode(nl)
