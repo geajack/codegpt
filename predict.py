@@ -51,7 +51,7 @@ def predict(model, tokenizer, dataset, device, log_every=100):
     model.zero_grad()
     model.eval()
 
-    for step, (batch, token_labels) in enumerate(dataloader):
+    for batch, token_labels in dataloader:
         yield predict_single(batch, model, tokenizer)
 
 
