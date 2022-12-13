@@ -2,15 +2,14 @@ import os
 
 import torch
 from torch.nn import CrossEntropyLoss
-from torch.utils.data import DataLoader, Dataset, SequentialSampler, RandomSampler,TensorDataset
-from torch.utils.data.distributed import DistributedSampler
+from torch.utils.data import DataLoader, RandomSampler
 from tensorboardX import SummaryWriter
 from transformers import WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup
 import numpy as np
 
 from run import set_seed
 from model import get_gpt2
-from dataset import CodeGPTDataset
+from dataset import CodeGPTDataset, conala_datasource
 
 
 def train(
@@ -216,25 +215,26 @@ def train(
 
 
 if __name__ == "__main__":
+    print("Running train.py")
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    model, tokenizer = get_gpt2()
+    model, tokenizer = get_gpt2("microsoft/CodeGPT-small-py-adaptedGPT2")
 
+    print("Loading dataset")
     dataset = CodeGPTDataset(
         tokenizer=tokenizer,
-        filepath="datasets/miniconcode/train.json",
+        datasource=conala_datasource("datasets/conala/train.json"),
         block_size=512,
         mode="train"
     )
 
-    fh = None
-    pool = None
-
+    print("Beginning training")
     train(
         dataset,
         model,
         tokenizer,
-        "/home/ICTDOMAIN/d20126116/Code/CodeGPT/models/concode_testing",
-        n_epochs=1,
+        "/home/ICTDOMAIN/d20126116/Code/CodeGPT/models/conala",
+        n_epochs=30,
         device=device
     )
