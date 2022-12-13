@@ -19,12 +19,12 @@ def read_config(path, mode):
 
     if model_source == "local":
         model_home = Path("../models")
-        full_model_uri = (model_home / model_uri).absolute()
+        full_model_uri = str((model_home / model_uri).absolute())
     else:
         full_model_uri = model_uri
 
     dataset_home = Path("datasets")
-    full_dataset_path = (dataset_home / data_file_path).absolute()
+    full_dataset_path = str((dataset_home / data_file_path).absolute())
 
     model, tokenizer = get_gpt2(full_model_uri)
 

@@ -8,8 +8,6 @@ from transformers import WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup
 import numpy as np
 import random
 
-from config import read_config
-
 
 def set_seed(seed, multiple_gpus=False):
     random.seed(seed)
@@ -225,6 +223,8 @@ if __name__ == "__main__":
     from sys import argv
     from pathlib import Path
     from datetime import datetime
+
+    from config import read_config
 
     config_path = argv[1]
     print("Running train.py", config_path)

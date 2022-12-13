@@ -6,8 +6,8 @@ from model import get_gpt2
 from dataset import CodeGPTDataset, conala_datasource
 
 
-def predict_single(batch, model, tokenizer, max_gen_len=100):
-    inputs = batch.to(device)        
+def predict_single(batch, model, tokenizer, device, max_gen_len=100):
+    inputs = batch.to(device)
     with torch.no_grad():
         beam_size = 10
         m = torch.nn.LogSoftmax(dim=-1)
@@ -43,7 +43,9 @@ def predict_single(batch, model, tokenizer, max_gen_len=100):
             return text
 
 
-def predict(model, tokenizer, dataset, device, log_every=100):
+def predict(model, tokenizer, dataset):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     sampler = SequentialSampler(dataset)
     dataloader = DataLoader(dataset, sampler=sampler, batch_size=1)
 
@@ -52,20 +54,30 @@ def predict(model, tokenizer, dataset, device, log_every=100):
     model.eval()
 
     for batch, token_labels in dataloader:
-        yield predict_single(batch, model, tokenizer)
+        yield predict_single(batch, model, tokenizer, device)
 
 
 if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    from sys import argv
+    from pathlib import Path
+    from datetime import datetime
 
-    model, tokenizer = get_gpt2("/home/ICTDOMAIN/d20126116/Code/CodeGPT/models/conala/checkpoint-last")
+    from config import read_config
 
-    datasource = conala_datasource("datasets/conala/test.json")
-    dataset = CodeGPTDataset(
-        tokenizer=tokenizer,
-        datasource=datasource,
-        block_size=512,
-        mode="test"
-    )
-    for prediction in predict(model, tokenizer, dataset, device):
-        print(prediction)
+    config_path = argv[1]
+    print("Running train.py", config_path)
+
+    model, tokenizer, dataset, config_name = read_config(config_path, "test")
+
+    output_home = Path("output/predictions")
+    now = datetime.now().strftime("%d-%m-%y@%H:%M:%S")
+    output_directory_name = f"{config_name}-{now}"
+    output_filepath = (output_home / output_directory_name).absolute()
+
+    with open(output_filepath, "wb") as output_file:
+        for prediction in predict(model, tokenizer, dataset):
+            buffer = prediction.encode("utf-8")
+            output_file.write(buffer)
+            output_file.write(b"\0")
+            output_file.flush()
+            print(prediction)
