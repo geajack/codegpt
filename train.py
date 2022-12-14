@@ -22,7 +22,6 @@ def train(
     model,
     tokenizer,
     output_dir,
-    local_rank=-1,
     per_gpu_train_batch_size=6,
     n_gpu=1,
     gradient_accumulation_steps=2,
@@ -40,20 +39,17 @@ def train(
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    if local_rank in [-1, 0]:
-        tensorboard_dir = os.path.join(output_dir, 'tensorboard')
-        if not os.path.exists(tensorboard_dir):
-            os.makedirs(tensorboard_dir)
-        tb_writer = SummaryWriter(tensorboard_dir)
+    tensorboard_dir = os.path.join(output_dir, 'tensorboard')
+    if not os.path.exists(tensorboard_dir):
+        os.makedirs(tensorboard_dir)
+    tb_writer = SummaryWriter(tensorboard_dir)
     
     batch_size = per_gpu_train_batch_size * max(1, n_gpu)
     train_sampler = RandomSampler(train_dataset)
     
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=batch_size, drop_last=True)
-    total_examples = len(train_dataset) * (
-                    torch.distributed.get_world_size() if local_rank != -1 else 1)
-    batch_size = batch_size * gradient_accumulation_steps * (
-                    torch.distributed.get_world_size() if local_rank != -1 else 1)
+    total_examples = len(train_dataset)
+    batch_size = batch_size * gradient_accumulation_steps
     # if max_steps > 0:
     #     t_total = max_steps
     #     num_train_epochs = max_steps // (len(train_dataloader) // gradient_accumulation_steps) + 1
@@ -61,8 +57,6 @@ def train(
         t_total = total_examples // batch_size * n_epochs
     max_steps = t_total
     model.to(device)
-    if local_rank not in [-1, 0]:
-        torch.distributed.barrier()  
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
@@ -79,19 +73,11 @@ def train(
     if os.path.exists(scheduler_last):
         scheduler.load_state_dict(torch.load(scheduler_last, map_location="cpu"))
     if os.path.exists(optimizer_last):
-        optimizer.load_state_dict(torch.load(optimizer_last, map_location="cpu"))   
-    if local_rank == 0:
-        torch.distributed.barrier()
+        optimizer.load_state_dict(torch.load(optimizer_last, map_location="cpu"))
 
     # multi-gpu training (should be after apex fp16 initialization)
     if n_gpu > 1:
         model = torch.nn.DataParallel(model)
-
-    # Distributed training (should be after apex fp16 initialization)
-    if local_rank != -1:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank%gpu_per_node],
-                                                          output_device=local_rank%gpu_per_node,
-                                                          find_unused_parameters=True)
 
     # Train!
     print("***** Running training *****")
@@ -150,21 +136,20 @@ def train(
                 avg_loss=round(np.exp((tr_loss - logging_loss) /(n_weight_updates- tr_nb)),4)
                 if n_weight_updates % logging_steps == 0:
                     print("  steps: %s  ppl: %s", n_weight_updates, round(avg_loss,5))
-                if local_rank in [-1, 0] and logging_steps > 0 and n_weight_updates % logging_steps == 0:
-                    # Log metrics
-                    tb_writer.add_scalar('lr', scheduler.get_last_lr()[0], n_weight_updates)
-                    tb_writer.add_scalar('loss', (tr_loss - logging_loss) / logging_steps, n_weight_updates)
-                    logging_loss = tr_loss
-                    tr_nb=n_weight_updates
+                
+                # Log metrics
+                tb_writer.add_scalar('lr', scheduler.get_last_lr()[0], n_weight_updates)
+                tb_writer.add_scalar('loss', (tr_loss - logging_loss) / logging_steps, n_weight_updates)
+                logging_loss = tr_loss
+                tr_nb=n_weight_updates
 
-                do_save = False
-                if local_rank in (-1, 0):
-                    if save_steps > 0 and n_weight_updates % save_steps == 0:
+                do_save = False                
+                if save_steps > 0 and n_weight_updates % save_steps == 0:
+                    do_save = True
+                if epoch_index == n_epochs - 1:
+                    index_of_last_weight_update = (n_batches_per_epoch // gradient_accumulation_steps) * gradient_accumulation_steps - 1
+                    if batch_index == index_of_last_weight_update:
                         do_save = True
-                    if epoch_index == n_epochs - 1:
-                        index_of_last_weight_update = (n_batches_per_epoch // gradient_accumulation_steps) * gradient_accumulation_steps - 1
-                        if batch_index == index_of_last_weight_update:
-                            do_save = True
 
                 if max_steps > 0 and n_weight_updates > max_steps:
                     do_save = True
@@ -213,8 +198,7 @@ def train(
         if do_stop:
             break
 
-    if local_rank in [-1, 0]:
-        tb_writer.close()
+    tb_writer.close()
 
     return n_weight_updates, tr_loss / n_weight_updates
 
