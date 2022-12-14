@@ -23,7 +23,7 @@ def train(
     output_dir,
     per_gpu_train_batch_size=6,
     gradient_accumulation_steps=2,
-    max_steps=-1,
+    max_steps=None,
     n_epochs=30,
     weight_decay=0.01,
     learning_rate=5e-5,
@@ -44,7 +44,7 @@ def train(
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=batch_size, drop_last=True)
     total_examples = len(train_dataset)
     
-    if n_epochs > 0:
+    if max_steps is None:
         max_steps = total_examples // batch_size * n_epochs
     
     no_decay = ["bias", "LayerNorm.weight"]
