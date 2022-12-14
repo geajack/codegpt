@@ -1,0 +1,9 @@
+dataset:
+  file: conala/train.json
+  format: conala
+model:
+  uri: microsoft/CodeGPT-small-py-adaptedGPT2
+  source: huggingface
+parameters:
+  seed: 0
+  max_steps: 100
