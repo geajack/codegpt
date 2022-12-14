@@ -74,7 +74,8 @@ def train(
     tr_nb = 0
     
     model.zero_grad()
-    set_seed(seed)  # Added here for reproducibility (even between python 2 and 3)
+    set_seed(seed)  # Added here for reproducibility (even between python 2 and 3)    
+    l = CrossEntropyLoss()
 
     do_stop = False 
     for epoch_index in range(0, int(n_epochs)): 
@@ -95,11 +96,9 @@ def train(
             shift_labels = labels[..., 1:].contiguous()
             
             # Flatten the tokens
-            loss_fct = CrossEntropyLoss()
             flatten_shift_loss_mask = loss_mask[..., :-1].contiguous().view(-1)
             ids = torch.nonzero(flatten_shift_loss_mask).view(-1)
-            loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1))[ids], shift_labels.view(-1)[ids])
-            
+            loss = l(shift_logits.view(-1, shift_logits.size(-1))[ids], shift_labels.view(-1)[ids])            
             if gradient_accumulation_steps > 1:
                 loss = loss / gradient_accumulation_steps
 
@@ -112,13 +111,14 @@ def train(
                 optimizer.step()
                 optimizer.zero_grad()
                 scheduler.step()
-                n_weight_updates += 1                
-                average_loss = round(np.exp((tr_loss - logging_loss) / (n_weight_updates- tr_nb)), 4)
+                n_weight_updates += 1
+
+                average_loss = round(np.exp((tr_loss - logging_loss) / (n_weight_updates - tr_nb)), 4)
                 if n_weight_updates % log_every == 0:
-                    print("  steps: %s  ppl: %s", n_weight_updates, round(average_loss,5))
+                    print("  steps: %s  ppl: %s", n_weight_updates, round(average_loss, 5))
                 
                 logging_loss = tr_loss
-                tr_nb=n_weight_updates
+                tr_nb = n_weight_updates
 
                 do_save = False                
                 if save_every > 0 and n_weight_updates % save_every == 0:
