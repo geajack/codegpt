@@ -2,6 +2,6 @@
 
 #SBATCH --mem 64000
 #SBATCH --partition LARGE-G2
-#SBATCH --output output/slurm-latest
+#SBATCH --output output/slurm-logs
 
 PYTHONUNBUFFERED=1 python predict.py $1
