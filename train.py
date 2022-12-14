@@ -17,10 +17,10 @@ def set_seed(seed, multiple_gpus=False):
 
 
 def train(
-    train_dataset,
+    dataset,
     model,
     tokenizer,
-    output_dir,
+    output_directory,
     per_gpu_train_batch_size=6,
     gradient_accumulation_steps=2,
     max_steps=None,
@@ -40,9 +40,9 @@ def train(
     batch_size = per_gpu_train_batch_size
     batch_size = batch_size * gradient_accumulation_steps
 
-    train_sampler = RandomSampler(train_dataset)    
-    train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=batch_size, drop_last=True)
-    total_examples = len(train_dataset)
+    train_sampler = RandomSampler(dataset)    
+    train_dataloader = DataLoader(dataset, sampler=train_sampler, batch_size=batch_size, drop_last=True)
+    total_examples = len(dataset)
     
     if max_steps is None:
         max_steps = total_examples // batch_size * n_epochs
@@ -56,7 +56,7 @@ def train(
     optimizer = AdamW(optimizer_grouped_parameters, lr=learning_rate, eps=adam_epsilon)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps,
                                                 num_training_steps=max_steps)
-    checkpoint_last = os.path.join(output_dir, "checkpoint-last")
+    checkpoint_last = os.path.join(output_directory, "checkpoint-last")
     scheduler_last = os.path.join(checkpoint_last, "scheduler.pt")
     optimizer_last = os.path.join(checkpoint_last, "optimizer.pt")
     if os.path.exists(scheduler_last):
@@ -88,7 +88,6 @@ def train(
             loss_mask = torch.tensor(token_labels.clone().detach() == 2, dtype=torch.uint8, device=device)
             
             model.train()
-            
             outputs = model(inputs, attention_mask=attn_mask)
             logits = outputs[0]
             labels = inputs
@@ -134,7 +133,7 @@ def train(
 
                 if do_save:
                     checkpoint_prefix = "checkpoint"                    
-                    checkpoint_dir = os.path.join(output_dir, "{}-{}".format(checkpoint_prefix, n_weight_updates))
+                    checkpoint_dir = os.path.join(output_directory, "{}-{}".format(checkpoint_prefix, n_weight_updates))
                     if not os.path.exists(checkpoint_dir):
                         os.makedirs(checkpoint_dir)
                     
@@ -145,7 +144,7 @@ def train(
                     
                     print("Saved model checkpoint to %s", checkpoint_dir)
 
-                    last_output_dir = os.path.join(output_dir, "checkpoint-last")
+                    last_output_dir = os.path.join(output_directory, "checkpoint-last")
                     if not os.path.exists(last_output_dir):
                         os.makedirs(last_output_dir)
                     
@@ -180,17 +179,17 @@ if __name__ == "__main__":
     config_path = argv[1]
     print("Running train.py", config_path)
 
-    model, tokenizer, dataset, config_name = read_config(config_path, "train")
+    model, tokenizer, dataset, parameters, config_name = read_config(config_path, "train")
 
     model_home = Path("/home/ICTDOMAIN/d20126116/Code/CodeGPT/models")
     now = datetime.now().strftime("%d-%m-%y@%H:%M:%S")
     output_directory_name = f"{config_name}-{now}"
     output_directory = (model_home / output_directory_name).absolute()
 
-    print("Beginning training")
     train(
-        dataset,
-        model,
-        tokenizer,
-        output_directory
+        dataset=dataset,
+        model=model,
+        tokenizer=tokenizer,
+        output_directory=output_directory,
+        **parameters
     )

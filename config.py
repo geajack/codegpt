@@ -42,4 +42,6 @@ def read_config(path, mode):
         mode=mode
     )
 
-    return model, tokenizer, dataset, config_name
+    parameters = config.get("parameters", {})
+
+    return model, tokenizer, dataset, parameters, config_name
