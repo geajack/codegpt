@@ -78,14 +78,7 @@ def preprocess(datasource, tokenizer, mode, block_size=512):
 
 class CodeGPTDataset(Dataset):
 
-    def __init__(self, datasource, mode, tokenizer, local_rank=-1, block_size=512):
-        if local_rank==-1:
-            local_rank=0
-            world_size=1
-        else:
-            local_rank=local_rank
-            world_size=torch.distributed.get_world_size()
-        
+    def __init__(self, datasource, mode, tokenizer, local_rank=-1, block_size=512):        
         self.inputs = []
         self.token_labels = []
         self.tokenizer = tokenizer

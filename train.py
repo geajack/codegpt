@@ -84,8 +84,8 @@ def train(
             batch_number = batch_index + 1
 
             inputs = batch.to(device)
-            attn_mask = torch.tensor(token_labels.clone().detach() != 0, dtype=torch.uint8, device=device)
-            loss_mask = torch.tensor(token_labels.clone().detach() == 2, dtype=torch.uint8, device=device)
+            attn_mask = (token_labels.detach() != 0).type(torch.uint8).to(device)
+            loss_mask = (token_labels.detach() == 2).type(torch.uint8).to(device)
             
             model.train()
             outputs = model(inputs, attention_mask=attn_mask)
