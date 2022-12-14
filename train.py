@@ -3,7 +3,6 @@ import os
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader, RandomSampler
-from tensorboardX import SummaryWriter
 from transformers import WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup
 import numpy as np
 import random
@@ -38,11 +37,6 @@ def train(
     save_steps=5000
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    tensorboard_dir = os.path.join(output_dir, 'tensorboard')
-    if not os.path.exists(tensorboard_dir):
-        os.makedirs(tensorboard_dir)
-    tb_writer = SummaryWriter(tensorboard_dir)
     
     batch_size = per_gpu_train_batch_size * max(1, n_gpu)
     train_sampler = RandomSampler(train_dataset)
@@ -138,8 +132,6 @@ def train(
                     print("  steps: %s  ppl: %s", n_weight_updates, round(avg_loss,5))
                 
                 # Log metrics
-                tb_writer.add_scalar('lr', scheduler.get_last_lr()[0], n_weight_updates)
-                tb_writer.add_scalar('loss', (tr_loss - logging_loss) / logging_steps, n_weight_updates)
                 logging_loss = tr_loss
                 tr_nb=n_weight_updates
 
@@ -197,8 +189,6 @@ def train(
                 break
         if do_stop:
             break
-
-    tb_writer.close()
 
     return n_weight_updates, tr_loss / n_weight_updates
 
