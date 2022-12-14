@@ -29,9 +29,10 @@ def read_config(path, mode):
     model, tokenizer = get_gpt2(full_model_uri)
 
     datasource_types = {
-        "codexglue": codexglue_datasource,
-        "conala"   : conala_datasource,
-        "mbpp"     : mbpp_datasource
+        "codexglue"       : codexglue_datasource,
+        "conala"          : conala_datasource,
+        "mbpp"            : mbpp_datasource,
+        "mbpp-normalized" : mbpp_normalized_datasource
     }
     datasource = datasource_types[data_format](full_dataset_path)
 

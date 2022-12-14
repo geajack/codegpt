@@ -35,6 +35,18 @@ def mbpp_datasource(filepath):
         yield data["text"], data["code"]
 
 
+def mbpp_normalized_datasource(filepath):
+    prefices = (
+        "Write a python function",
+        "Write a function",
+    )
+    for nl, code in mbpp_datasource(filepath):
+        for prefix in prefices:
+            if nl.startswith(prefix):
+                nl = nl[len(prefix):]
+        yield nl, code
+
+
 def preprocess(datasource, tokenizer, mode, block_size=512):
     for nl, code in datasource:
         nl_tokens = tokenizer.encode(nl)

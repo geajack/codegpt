@@ -1,0 +1,6 @@
+dataset:
+  file: mbpp/mbpp.jsonl
+  format: mbpp-normalized
+model:
+  uri: conala/checkpoint-last
+  source: local

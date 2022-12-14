@@ -65,7 +65,7 @@ if __name__ == "__main__":
     from config import read_config
 
     config_path = argv[1]
-    print("Running train.py", config_path)
+    print("Running predict.py", config_path)
 
     model, tokenizer, dataset, config_name = read_config(config_path, "test")
 
