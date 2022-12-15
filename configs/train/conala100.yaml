@@ -7,3 +7,4 @@ model:
 parameters:
   seed: 0
   max_steps: 100
+  block_size: 64

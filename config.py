@@ -16,6 +16,7 @@ def read_config(path, mode):
     data_file_path = config["dataset"]["file"]
     model_source   = config["model"]["source"]
     model_uri      = config["model"]["uri"]
+    parameters     = config.get("parameters", {})
 
     if model_source == "local":
         model_home = Path("../models")
@@ -36,12 +37,17 @@ def read_config(path, mode):
     }
     datasource = datasource_types[data_format](full_dataset_path)
 
+    dataset_parameter_names = ["block_size"]
+    dataset_parameters = {}
+    for name in dataset_parameter_names:
+        if name in parameters:
+            dataset_parameters[name] = parameters.pop(name)
+
     dataset = CodeGPTDataset(
         datasource=datasource,
         tokenizer=tokenizer,
-        mode=mode
+        mode=mode,
+        **dataset_parameters
     )
-
-    parameters = config.get("parameters", {})
 
     return model, tokenizer, dataset, parameters, config_name
