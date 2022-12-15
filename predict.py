@@ -1,9 +1,6 @@
 import torch
 from   torch.utils.data import DataLoader, SequentialSampler
 from   beam import Beam
-from model import get_gpt2
-
-from dataset import CodeGPTDataset, conala_datasource
 
 
 def predict_single(batch, model, tokenizer, device, max_gen_len=100):
