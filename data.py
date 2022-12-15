@@ -78,7 +78,7 @@ def preprocess(datasource, tokenizer, mode, block_size=512):
 
 class CodeGPTDataset(Dataset):
 
-    def __init__(self, datasource, mode, tokenizer, local_rank=-1, block_size=512):        
+    def __init__(self, datasource, mode, tokenizer, block_size=512):        
         self.inputs = []
         self.token_labels = []
         self.tokenizer = tokenizer
