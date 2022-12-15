@@ -29,7 +29,7 @@ def predict_single(batch, model, tokenizer, device, max_gen_len=100):
                 past = [torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)],dim=0) if type(x)==tuple else x for x in transformer_outputs[1]]
                 past_hidden = [x.data.index_select(1, beam.getCurrentOrigin()) for x in past]
             hyp = beam.getHyp(beam.getFinal())
-            pred  =beam.buildTargetTokens(hyp)[:beam_size]
+            pred = beam.buildTargetTokens(hyp)[:beam_size]
 
             pred = [torch.cat([x.view(-1) for x in p]+[zero]*(max_gen_len-len(p))).view(1,-1) for p in pred]
             p.append(torch.cat(pred, 0).unsqueeze(0))
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     config_path = argv[1]
     print("Running predict.py", config_path)
 
-    model, tokenizer, dataset, config_name = read_config(config_path, "test")
+    model, tokenizer, dataset, parameters, config_name = read_config(config_path, "test")
 
     output_home = Path("output/predictions")
     now = datetime.now().strftime("%d-%m-%y@%H:%M:%S")

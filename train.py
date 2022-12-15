@@ -7,6 +7,8 @@ from transformers import WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup
 import numpy as np
 import random
 
+from predict import predict_single
+
 
 def set_seed(seed, multiple_gpus=False):
     random.seed(seed)
@@ -77,6 +79,7 @@ def train(
     set_seed(seed)  # Added here for reproducibility (even between python 2 and 3)    
     l = CrossEntropyLoss()
 
+    model.train()
     do_stop = False 
     for epoch_index in range(0, int(n_epochs)): 
         epoch_number = epoch_index + 1
@@ -87,7 +90,6 @@ def train(
             attn_mask = (token_labels.detach() != 0).type(torch.uint8).to(device)
             loss_mask = (token_labels.detach() == 2).type(torch.uint8).to(device)
             
-            model.train()
             outputs = model(inputs, attention_mask=attn_mask)
             logits = outputs[0]
             labels = inputs
@@ -111,6 +113,12 @@ def train(
                 optimizer.zero_grad()
                 scheduler.step()
                 n_weight_updates += 1
+
+                model.eval()
+                prediction = predict_single(batch, model, tokenizer, device)
+                print(prediction)
+                print()
+                model.train()
 
                 average_loss = round(np.exp((tr_loss - logging_loss) / (n_weight_updates - tr_nb)), 4)
                 if n_weight_updates % log_every == 0:
