@@ -1,7 +1,7 @@
 import yaml
 from pathlib import Path
 
-from Codebase.data import *
+from data import *
 from model import *
 
 

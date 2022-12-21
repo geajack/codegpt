@@ -3,8 +3,7 @@ from   torch.utils.data import DataLoader, SequentialSampler
 from   beam import Beam
 
 
-def predict_single(batch, model, tokenizer, device, max_gen_len=100):
-    inputs = batch.to(device)
+def predict_single(inputs, model, tokenizer, max_gen_len=100):
     with torch.no_grad():
         beam_size = 10
         m = torch.nn.LogSoftmax(dim=-1)
@@ -50,8 +49,9 @@ def predict(model, tokenizer, dataset):
     model.zero_grad()
     model.eval()
 
-    for batch, token_labels in dataloader:
-        yield predict_single(batch, model, tokenizer, device)
+    for input_ids, batch, token_labels in dataloader:
+        batch.to(device)
+        yield predict_single(batch, model, tokenizer)
 
 
 if __name__ == "__main__":

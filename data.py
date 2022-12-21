@@ -47,33 +47,32 @@ def mbpp_normalized_datasource(filepath):
         yield nl, code
 
 
-def preprocess(datasource, tokenizer, mode, block_size=512):
-    for nl, code in datasource:
-        nl_tokens = tokenizer.encode(nl)
-        code_tokens = tokenizer.encode(code)
+def preprocess(nl, code, tokenizer, mode, block_size=512):
+    nl_tokens = tokenizer.encode(nl)
+    code_tokens = tokenizer.encode(code)
 
-        if mode == "test":
-            code_tokens = []
-        
-        while (len(code_tokens) + len(nl_tokens) + 2 > block_size):
-            if (len(code_tokens) > len(nl_tokens)):
-                code_tokens = code_tokens[:-1]
-            else:
-                nl_tokens = nl_tokens[:-1]
-        
-        inputs = nl_tokens + [tokenizer.bos_token_id]
-        labels = [1] * len(nl_tokens) + [2]
+    if mode == "test":
+        code_tokens = []
+    
+    while (len(code_tokens) + len(nl_tokens) + 2 > block_size):
+        if (len(code_tokens) > len(nl_tokens)):
+            code_tokens = code_tokens[:-1]
+        else:
+            nl_tokens = nl_tokens[:-1]
+    
+    inputs = nl_tokens + [tokenizer.bos_token_id]
+    labels = [1] * len(nl_tokens) + [2]
 
-        if mode == "train":
-            inputs += code_tokens + [tokenizer.eos_token_id]
-            labels += [2] * len(code_tokens) + [0]
-            assert len(inputs) <= block_size
-            pad_len = block_size - len(inputs)
-            inputs += [tokenizer.pad_token_id] * pad_len
-            labels += [0] * pad_len
-            assert len(inputs) == len(labels), (len(inputs), len(labels))
+    if mode == "train":
+        inputs += code_tokens + [tokenizer.eos_token_id]
+        labels += [2] * len(code_tokens) + [0]
+        assert len(inputs) <= block_size
+        pad_len = block_size - len(inputs)
+        inputs += [tokenizer.pad_token_id] * pad_len
+        labels += [0] * pad_len
+        assert len(inputs) == len(labels), (len(inputs), len(labels))
 
-        yield inputs, labels
+    return inputs, labels
 
 
 class CodeGPTDataset(Dataset):
@@ -83,7 +82,8 @@ class CodeGPTDataset(Dataset):
         self.token_labels = []
         self.tokenizer = tokenizer
 
-        for inputs, labels in preprocess(datasource, tokenizer=tokenizer, mode=mode, block_size=block_size):
+        for nl, code in datasource:
+            inputs, labels = preprocess(nl, code, tokenizer=tokenizer, mode=mode, block_size=block_size)
             self.inputs.append(inputs)
             self.token_labels.append(labels)
             
@@ -102,7 +102,7 @@ class CodeGPTDataset(Dataset):
         return len(self.inputs)
 
     def __getitem__(self, item):
-        return torch.tensor(self.inputs[item]), torch.tensor(self.token_labels[item])
+        return item, torch.tensor(self.inputs[item]), torch.tensor(self.token_labels[item])
 
 
 if __name__ == "__main__":
