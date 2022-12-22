@@ -1,8 +1,9 @@
 import yaml
 from pathlib import Path
 
-from data import *
+from data import CodeGPTDataset
 from model import *
+from data.datasources import get_datasource
 
 
 def read_config(path, mode):
@@ -12,11 +13,12 @@ def read_config(path, mode):
 
     config_name = full_path.stem
 
-    data_format    = config["dataset"]["format"]
-    data_file_path = config["dataset"]["file"]
-    model_source   = config["model"]["source"]
-    model_uri      = config["model"]["uri"]
-    parameters     = config.get("parameters", {})
+    data_format           = config["dataset"]["format"]
+    data_file_path        = config["dataset"]["file"]
+    datasource_parameters = config["dataset"].get("parameters", {})
+    model_source          = config["model"]["source"]
+    model_uri             = config["model"]["uri"]
+    parameters            = config.get("parameters", {})
 
     if model_source == "local":
         model_home = Path("../models")
@@ -29,13 +31,8 @@ def read_config(path, mode):
 
     model, tokenizer = get_gpt2(full_model_uri)
 
-    datasource_types = {
-        "codexglue"       : codexglue_datasource,
-        "conala"          : conala_datasource,
-        "mbpp"            : mbpp_datasource,
-        "mbpp-normalized" : mbpp_normalized_datasource
-    }
-    datasource = datasource_types[data_format](full_dataset_path)
+    datasource_function = get_datasource(data_format)
+    datasource = datasource_function(full_dataset_path, **datasource_parameters)
 
     dataset_parameter_names = ["block_size"]
     dataset_parameters = {}
