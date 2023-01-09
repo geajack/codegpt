@@ -7,31 +7,6 @@ from transformers import WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup
 import numpy as np
 import random
 
-from predict import predict_single
-
-
-class PredictionTracker:
-
-    def __init__(self, test_input, output_path, weight_updates_per_log):
-        self.test_input = test_input
-        self.output_path = output_path
-        self.log_every = weight_updates_per_log
-        self.seen_training_data = []
-
-    def on_batch(self, input_ids):
-        self.seen_training_data += [x.item() for x in input_ids]
-
-    def on_weight_update(self, model, tokenizer):
-        model.eval()
-        prediction = predict_single(self.test_input, model, tokenizer)
-        with open(self.output_path, "a") as out:
-            print("Saw inputs:", file=out)
-            print("  ", self.seen_training_data, file=out)
-            print(prediction, file=out)
-            print(file=out)
-        model.train()
-        self.seen_training_data = []
-
 
 def set_seed(seed, multiple_gpus=False):
     random.seed(seed)
@@ -57,8 +32,7 @@ def train(
     seed=0,
     max_grad_norm=1.0,
     log_every=100,
-    save_every=5000,
-    callbacks=[]
+    save_every=5000
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -103,20 +77,17 @@ def train(
     set_seed(seed)  # Added here for reproducibility (even between python 2 and 3)    
     l = CrossEntropyLoss()
 
-    model.train()
     do_stop = False 
     for epoch_index in range(0, int(n_epochs)): 
         epoch_number = epoch_index + 1
         for batch_index, (input_ids, batch, token_labels) in enumerate(train_dataloader):
             batch_number = batch_index + 1
 
-            for callback in callbacks:
-                callback.on_batch(input_ids)
-
             inputs = batch.to(device)
             attn_mask = (token_labels.detach() != 0).type(torch.uint8).to(device)
             loss_mask = (token_labels.detach() == 2).type(torch.uint8).to(device)
             
+            model.train()
             outputs = model(inputs, attention_mask=attn_mask)
             logits = outputs[0]
             labels = inputs
@@ -140,9 +111,6 @@ def train(
                 optimizer.zero_grad()
                 scheduler.step()
                 n_weight_updates += 1
-
-                for callback in callbacks:
-                    callback.on_weight_update(model, tokenizer)
 
                 average_loss = round(np.exp((tr_loss - logging_loss) / (n_weight_updates - tr_nb)), 4)
                 if n_weight_updates % log_every == 0:
@@ -218,28 +186,10 @@ if __name__ == "__main__":
     output_directory_name = f"{config_name}-{now}"
     output_directory = (model_home / output_directory_name).absolute()
 
-    from data import conala_datasource, preprocess
-
-    nl, code = list(conala_datasource("datasets/conala/test.json"))[2]
-    test_input, _ = preprocess(nl, code, tokenizer, "test")
-    test_input = torch.tensor(test_input)[None].to("cuda")
-    tracker = PredictionTracker(test_input, "output/tracking", 10)
-
-    model.eval()
-    model.to("cuda")
-    prediction = predict_single(test_input, model, tokenizer)
-    with open("output/tracking", "w") as out:
-        print("Prompt:", nl, file=out)
-        print(file=out)
-        print("Initial prediction:", file=out)
-        print(prediction, file=out)
-        print(file=out)
-
     train(
         dataset=dataset,
         model=model,
         tokenizer=tokenizer,
         output_directory=output_directory,
-        callbacks=[tracker],
         **parameters
     )
