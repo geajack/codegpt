@@ -1,5 +1,6 @@
 dataset:
-  file: conala/test.json
+  parameters:
+    filepath: conala/test.json
   format: conala
 model:
   uri: conala100-15-12-22@11:29:11/checkpoint-last

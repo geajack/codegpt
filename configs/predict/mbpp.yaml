@@ -1,5 +1,6 @@
 dataset:
-  file: mbpp/mbpp.jsonl
+  parameters:
+    filepath: mbpp/mbpp.jsonl
   format: mbpp
 model:
   uri: conala/checkpoint-last

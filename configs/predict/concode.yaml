@@ -1,5 +1,6 @@
 dataset:
-  file: concode/test.json
+  parameters:
+    filepath: concode/test.json
   format: codexglue
 model:
   uri: concode

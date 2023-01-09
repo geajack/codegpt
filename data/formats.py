@@ -43,5 +43,5 @@ def mbpp_normalized(filepath):
         yield nl, code
 
 
-def get_datasource(name):
+def get_format(name):
     return globals()[name]

@@ -1,5 +1,6 @@
 dataset:
-  file: concode/train.json
+  parameters:
+    filepath: concode/train.json
   format: codexglue
 model:
   uri: microsoft/CodeGPT-small-java-adaptedGPT2

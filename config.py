@@ -3,7 +3,7 @@ from pathlib import Path
 
 from data import CodeGPTDataset
 from model import *
-from data.datasources import get_datasource
+from data.formats import get_format
 
 
 def read_config(path, mode):
@@ -14,7 +14,6 @@ def read_config(path, mode):
     config_name = full_path.stem
 
     data_format           = config["dataset"]["format"]
-    data_file_path        = config["dataset"]["file"]
     datasource_parameters = config["dataset"].get("parameters", {})
     model_source          = config["model"]["source"]
     model_uri             = config["model"]["uri"]
@@ -26,13 +25,10 @@ def read_config(path, mode):
     else:
         full_model_uri = model_uri
 
-    dataset_home = Path("datasets")
-    full_dataset_path = str((dataset_home / data_file_path).absolute())
-
     model, tokenizer = get_gpt2(full_model_uri)
 
-    datasource_function = get_datasource(data_format)
-    datasource = datasource_function(full_dataset_path, **datasource_parameters)
+    datasource_function = get_format(data_format)
+    datasource = datasource_function(**datasource_parameters)
 
     dataset_parameter_names = ["block_size"]
     dataset_parameters = {}

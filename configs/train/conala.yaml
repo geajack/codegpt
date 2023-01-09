@@ -1,5 +1,6 @@
 dataset:
-  file: conala/train.json
+  parameters:
+    filepath: conala/train.json
   format: conala
 model:
   uri: microsoft/CodeGPT-small-py-adaptedGPT2
