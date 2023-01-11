@@ -1,0 +1,9 @@
+dataset:
+  parameters:
+    mined_filepath: datasets/conala/mined.jsonl
+    train_filepath: datasets/conala/train.json
+    threshold: 0.4
+  format: conala_noisy
+model:
+  uri: microsoft/CodeGPT-small-py-adaptedGPT2
+  source: huggingface

@@ -22,6 +22,24 @@ def conala(filepath):
         yield nl, code
 
 
+def conala_noisy(mined_filepath, train_filepath, threshold):
+    yield from conala(train_filepath)
+
+    with open(mined_filepath) as file:
+        lines = file.readlines()
+
+    for line in lines:
+        entry = json.loads(line)
+        nl = entry["intent"]
+        code = entry["snippet"]
+        probability = entry["prob"]
+
+        if probability < threshold:
+            break
+
+        yield nl, code
+
+
 def mbpp(filepath):
     with open(filepath, "r") as file:
         lines = file.readlines()
