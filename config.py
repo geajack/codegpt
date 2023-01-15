@@ -6,6 +6,19 @@ from model import *
 from data.formats import get_format
 
 
+def load_dataset(path):
+    full_path = Path(path)
+    with open(full_path) as config_file:
+        config = yaml.load(config_file, Loader=yaml.SafeLoader)
+
+    data_format           = config["dataset"]["format"]
+    datasource_parameters = config["dataset"].get("parameters", {})
+    datasource_function = get_format(data_format)
+    datasource = datasource_function(**datasource_parameters)
+
+    return datasource
+
+
 def read_config(path, mode):
     full_path = Path(path)
     with open(full_path) as config_file:
