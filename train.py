@@ -7,6 +7,9 @@ from transformers import WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup
 import numpy as np
 import random
 
+from model import get_gpt2
+from data import CodeGPTDataset
+
 
 def set_seed(seed, multiple_gpus=False):
     random.seed(seed)
@@ -17,9 +20,8 @@ def set_seed(seed, multiple_gpus=False):
 
 
 def train(
-    dataset,
     model,
-    tokenizer,
+    datasource,
     output_directory,
     per_gpu_train_batch_size=6,
     gradient_accumulation_steps=2,
@@ -34,6 +36,13 @@ def train(
     log_every=100,
     save_every=5000
 ):
+    model, tokenizer = get_gpt2(model)
+    dataset = CodeGPTDataset(
+        datasource=datasource,
+        tokenizer=tokenizer,
+        mode="train"
+    )
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
@@ -167,6 +176,8 @@ def train(
                 break
         if do_stop:
             break
+
+    return last_output_dir
 
 
 if __name__ == "__main__":

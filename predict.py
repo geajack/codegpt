@@ -1,3 +1,5 @@
+from data import CodeGPTDataset
+from model import get_gpt2
 import torch
 from   torch.utils.data import DataLoader, SequentialSampler
 from   beam import Beam
@@ -39,7 +41,14 @@ def predict_single(inputs, model, tokenizer, max_gen_len=100):
             return text
 
 
-def predict(model, tokenizer, dataset):
+def predict(model, datasource):
+    model, tokenizer = get_gpt2(model)
+    dataset = CodeGPTDataset(
+        datasource=datasource,
+        tokenizer=tokenizer,
+        mode="test"
+    )
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     sampler = SequentialSampler(dataset)
@@ -50,8 +59,7 @@ def predict(model, tokenizer, dataset):
     model.eval()
 
     for input_ids, batch, token_labels in dataloader:
-        batch.to(device)
-        yield predict_single(batch, model, tokenizer)
+        yield predict_single(batch.to(device), model, tokenizer)
 
 
 if __name__ == "__main__":
