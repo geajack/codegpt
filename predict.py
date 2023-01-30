@@ -43,10 +43,9 @@ def predict_single(inputs, model, tokenizer, max_gen_len=100):
 
 def predict(model, datasource):
     model, tokenizer = get_gpt2(model)
-    dataset = CodeGPTDataset(
+    dataset = CodeGPTDataset.from_test_data(
         datasource=datasource,
-        tokenizer=tokenizer,
-        mode="test"
+        tokenizer=tokenizer
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
