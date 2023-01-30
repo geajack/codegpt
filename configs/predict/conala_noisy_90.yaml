@@ -1,7 +1,0 @@
-dataset:
-  parameters:
-    filepath: datasets/conala/test.json
-  format: conala
-model:
-  uri: conala_noisy_90-09-01-23@20:38:07/checkpoint-last
-  source: local

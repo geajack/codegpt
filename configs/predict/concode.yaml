@@ -1,7 +1,0 @@
-dataset:
-  parameters:
-    filepath: concode/test.json
-  format: codexglue
-model:
-  uri: concode
-  source: local
