@@ -19,3 +19,11 @@ def save_output(output_file, output_source):
             output_file.write(b"\0")
             output_file.flush()
             print(prediction)
+
+
+def read_output_file(output_file):
+    with open(output_file, "rb") as output_file:
+        buffer = output_file.read()
+        decoded = buffer.decode("utf-8")
+        predictions = decoded.split("\0")
+        return predictions
