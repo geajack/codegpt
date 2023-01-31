@@ -79,6 +79,10 @@ class CodeGPTDataset(Dataset):
     def __getitem__(self, item):
         return item, torch.tensor(self.inputs[item]), torch.tensor(self.token_labels[item])
 
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
 
 if __name__ == "__main__":
     import logging
