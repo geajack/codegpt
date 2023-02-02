@@ -10,7 +10,7 @@ def predict_single(inputs, model, tokenizer, max_gen_len=100):
         beam_size = 10
         m = torch.nn.LogSoftmax(dim=-1)
         outputs = model(inputs)[1]
-        p = []       
+        p = []
         zero = torch.cuda.LongTensor(1).fill_(0)
         for i in range(inputs.shape[0]):
             past = [torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)],dim=0) if type(x)==tuple else x for x in outputs]

@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 
 def preprocess_train(nl, code, tokenizer, block_size=512):
     code_tokens = tokenizer.encode(code)
-    inputs, labels = preprocess_test(nl, tokenizer, block_size=float("inf"))
+    nl_tokens, labels = preprocess_test(nl, tokenizer, block_size=float("inf"))
 
     while (len(code_tokens) + len(nl_tokens) + 2 > block_size):
         if (len(code_tokens) > len(nl_tokens)):
@@ -15,7 +15,7 @@ def preprocess_train(nl, code, tokenizer, block_size=512):
         else:
             nl_tokens = nl_tokens[:-1]
 
-    inputs += code_tokens + [tokenizer.eos_token_id]
+    inputs = nl_tokens + code_tokens + [tokenizer.eos_token_id]
     labels += [2] * len(code_tokens) + [0]
     assert len(inputs) <= block_size
     pad_len = block_size - len(inputs)
@@ -41,18 +41,23 @@ class CodeGPTDataset(Dataset):
 
     @staticmethod
     def from_training_data(datasource, tokenizer, block_size=512):
-        dataset = CodeGPTDataset(tokenizer)
-        for nl, code in datasource:
-            inputs, labels = preprocess_train(nl, code, tokenizer=tokenizer, block_size=block_size)
-            dataset.inputs.append(inputs)
-            dataset.token_labels.append(labels)
-        return dataset
+        preprocessed_data = (
+            preprocess_train(nl, code, tokenizer=tokenizer, block_size=block_size)
+            for nl, code in datasource
+        )
+        return CodeGPTDataset.from_preprocessed(preprocessed_data, tokenizer)
 
     @staticmethod
     def from_test_data(datasource, tokenizer, block_size=512):
+        preprocessed_data = (
+            preprocess_test(nl, tokenizer=tokenizer, block_size=block_size)
+            for nl in datasource
+        )
+        return CodeGPTDataset.from_preprocessed(preprocessed_data, tokenizer)
+
+    def from_preprocessed(preprocessed_data, tokenizer):
         dataset = CodeGPTDataset(tokenizer)
-        for nl in datasource:
-            inputs, labels = preprocess_test(nl, tokenizer=tokenizer, block_size=block_size)
+        for inputs, labels in preprocessed_data:
             dataset.inputs.append(inputs)
             dataset.token_labels.append(labels)
         return dataset

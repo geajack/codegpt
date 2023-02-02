@@ -41,5 +41,6 @@ def human_eval_prompts():
 
 
 if __name__ == "__main__":
-    for description in human_eval_prompts():
+    for description in human_eval_contexts():
         print(description)
+        exit()

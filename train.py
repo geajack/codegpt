@@ -37,10 +37,9 @@ def train(
     save_every=5000
 ):
     model, tokenizer = get_gpt2(model)
-    dataset = CodeGPTDataset(
+    dataset = CodeGPTDataset.from_training_data(
         datasource=datasource,
-        tokenizer=tokenizer,
-        mode="train"
+        tokenizer=tokenizer
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -123,7 +122,7 @@ def train(
 
                 average_loss = round(np.exp((tr_loss - logging_loss) / (n_weight_updates - tr_nb)), 4)
                 if n_weight_updates % log_every == 0:
-                    print("  steps: %s  ppl: %s", n_weight_updates, round(average_loss, 5))
+                    print(f"  steps: {n_weight_updates}  ppl: {round(average_loss, 5)}")
                 
                 logging_loss = tr_loss
                 tr_nb = n_weight_updates
