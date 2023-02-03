@@ -13,7 +13,7 @@ pip install transformers
 Note that `torch` must be installed before `transformers` so that the `transformers` library is automatically configured to use it.
 
 ### Datasets
-To download the datasets you will need to have `git lfs` installed (e.g. `sudo apt install git lfs`) and set up (run `git lfs install`). If it works, you should end up with a folder called `datasets` in the root of this repository containing several large JSON files.
+To download the datasets you will need to have `git lfs` installed (e.g. `sudo apt install git-lfs`) and set up (run `git lfs install`). If it works, you should end up with a folder called `datasets` in the root of this repository containing several large JSON files.
 
 ## Usage
 
