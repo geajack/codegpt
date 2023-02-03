@@ -21,7 +21,7 @@ def predict_single(inputs, model, tokenizer, max_gen_len=100):
                 if beam.done():
                     break
                 input_ids = beam.getCurrentState()    
-                transformer_outputs = model(input_ids, past=past_hidden)
+                transformer_outputs = model(input_ids, past_key_values=past_hidden)
                 out = m(transformer_outputs[0][:, -1, :]).data
                 beam.advance(out)
                 past = [torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)],dim=0) if type(x)==tuple else x for x in transformer_outputs[1]]
@@ -62,26 +62,13 @@ def predict(model, datasource):
 
 
 if __name__ == "__main__":
-    from sys import argv
-    from pathlib import Path
-    from datetime import datetime
+    import data.formats
+    import transformers
 
-    from config import read_config
+    transformers.logging.set_verbosity_error()
 
-    config_path = argv[1]
-    print("Running predict.py", config_path)
+    datasource = (nl for nl, code in data.formats.conala("datasets/conala/test.json"))
+    predictions = predict("microsoft/CodeGPT-small-py-adaptedGPT2", datasource)
+    prediction = next(predictions)
 
-    model, tokenizer, dataset, parameters, config_name = read_config(config_path, "test")
-
-    output_home = Path("output/predictions")
-    now = datetime.now().strftime("%d-%m-%y@%H:%M:%S")
-    output_directory_name = f"{config_name}-{now}"
-    output_filepath = (output_home / output_directory_name).absolute()
-
-    with open(output_filepath, "wb") as output_file:
-        for prediction in predict(model, tokenizer, dataset):
-            buffer = prediction.encode("utf-8")
-            output_file.write(buffer)
-            output_file.write(b"\0")
-            output_file.flush()
-            print(prediction)
+    print(prediction)

@@ -180,26 +180,15 @@ def train(
 
 
 if __name__ == "__main__":
-    from sys import argv
-    from pathlib import Path
-    from datetime import datetime
+    import data.formats
+    import transformers
 
-    from config import read_config
+    transformers.logging.set_verbosity_error()
 
-    config_path = argv[1]
-    print("Running train.py", config_path)
-
-    model, tokenizer, dataset, parameters, config_name = read_config(config_path, "train")
-
-    model_home = Path("/home/ICTDOMAIN/d20126116/Code/CodeGPT/models")
-    now = datetime.now().strftime("%d-%m-%y@%H:%M:%S")
-    output_directory_name = f"{config_name}-{now}"
-    output_directory = (model_home / output_directory_name).absolute()
-
-    train(
-        dataset=dataset,
-        model=model,
-        tokenizer=tokenizer,
-        output_directory=output_directory,
-        **parameters
+    final_output_path = train(
+        model="microsoft/CodeGPT-small-py-adaptedGPT2",
+        datasource=data.formats.conala("datasets/conala/train.json"),
+        output_directory="trained_model_delete_me"
     )
+
+    print(final_output_path) # This value can be given as the "model" argument of predict.predict().
