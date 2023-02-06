@@ -1,7 +1,8 @@
 #!/bin/bash
 
 #SBATCH --mem 64000
-#SBATCH --partition LARGE-G2
+#SBATCH --partition MEDIUM-G2
 #SBATCH --output output/logs
 
-PYTHONPATH=. PYTHONUNBUFFERED=1 ../pyenv/bin/python $@
+# ifconfig
+PYTHONPATH=. PYTHONUNBUFFERED=1 python -m debugpy --listen 5000 --wait-for-client $@
