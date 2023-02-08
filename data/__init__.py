@@ -5,6 +5,25 @@ import torch
 from torch.utils.data import Dataset
 
 
+def preprocess_code_only(code, tokenizer, block_size=512):
+    code_tokens = tokenizer.encode(code)
+    while len(code_tokens) > block_size:
+        code_tokens = code_tokens[:-1]
+
+    labels = [2] * len(code_tokens)
+    return code_tokens, labels
+
+
+def preprocess_code_train(code, tokenizer, block_size=512):
+    code_tokens, labels = preprocess_code_only(code, tokenizer, block_size)
+    pad_length = block_size - len(code_tokens)
+    if pad_length > 0:
+        code_tokens += [tokenizer.pad_token_id] * pad_length
+        labels += [0] * pad_length
+
+    return code_tokens, labels
+
+
 def preprocess_train(nl, code, tokenizer, block_size=512):
     code_tokens = tokenizer.encode(code)
     nl_tokens, labels = preprocess_test(nl, tokenizer, block_size=float("inf"))

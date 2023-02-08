@@ -21,7 +21,7 @@ def set_seed(seed, multiple_gpus=False):
 
 def train(
     model,
-    datasource,
+    dataset,
     output_directory,
     per_gpu_train_batch_size=6,
     gradient_accumulation_steps=2,
@@ -36,11 +36,7 @@ def train(
     log_every=100,
     save_every=5000
 ):
-    model, tokenizer = get_gpt2(model)
-    dataset = CodeGPTDataset.from_training_data(
-        datasource=datasource,
-        tokenizer=tokenizer
-    )
+    model, tokenizer = get_gpt2(model)    
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)

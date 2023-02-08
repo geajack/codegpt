@@ -1,12 +1,17 @@
-from data import CodeGPTDataset
+from data import CodeGPTDataset, preprocess_code_train
 from data.contextual_conala import contextual_conala_contexts
-from model import get_gpt2
+from model import get_gpt2, get_gpt2_tokenizer
 
 
-model, tokenizer = get_gpt2("microsoft/CodeGPT-small-py-adaptedGPT2")
-datasource = (("", code) for code in contextual_conala_contexts())
-dataset = CodeGPTDataset.from_training_data(
-    datasource=datasource,
+tokenizer = get_gpt2_tokenizer("microsoft/CodeGPT-small-py-adaptedGPT2")
+
+preprocessed = (
+    preprocess_code_train(code, tokenizer=tokenizer)
+    for code in contextual_conala_contexts()
+)
+
+dataset = CodeGPTDataset.from_preprocessed(
+    preprocessed_data=preprocessed,
     tokenizer=tokenizer
 )
 

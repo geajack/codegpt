@@ -15,11 +15,10 @@ MODEL_CLASSES = {
 }
 
 
-def get_gpt2(weights):
+def get_gpt2_tokenizer(weights):
     model_type   = "gpt2"
-
     config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
-    
+
     tokenizer = tokenizer_class.from_pretrained(
         weights,
         do_lower_case=False,
@@ -29,6 +28,15 @@ def get_gpt2(weights):
         unk_token="<|UNKNOWN|>",
         sep_token="concode_elem_sep"
     )
+
+    return tokenizer
+
+def get_gpt2(weights):
+    model_type   = "gpt2"
+
+    config_class, model_class, tokenizer_class = MODEL_CLASSES[model_type]
+    
+    tokenizer = get_gpt2_tokenizer(weights)
 
     model = model_class.from_pretrained(weights)
     model.resize_token_embeddings(len(tokenizer))    
