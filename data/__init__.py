@@ -1,3 +1,4 @@
+from pathlib import Path
 import pickle
 import json
 
@@ -92,6 +93,16 @@ class CodeGPTDataset(Dataset):
             pickle.dump({'inputs': self.inputs, 'token_labels': self.token_labels}, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def save_debug(self, filepath):
+        Path(filepath).parent.mkdir(exist_ok=True, parents=True)
+        with open(filepath, "w") as handle:
+            for tokens in self.inputs:
+                decoded = self.tokenizer.decode(tokens)
+                print("```", file=handle)
+                print(decoded, file=handle)
+                print("```", file=handle)
+                print()            
+
+    def save_tokens(self, filepath):
         with open(filepath, "w") as handle:
             for tokens in self.inputs:
                 output = [tokenizer.decode(token).strip() for token in tokens]
