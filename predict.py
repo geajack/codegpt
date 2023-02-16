@@ -1,5 +1,5 @@
-from data import CodeGPTDataset
-from model import get_gpt2
+from data import *
+from model import get_gpt2, get_gpt2_tokenizer
 import torch
 from   torch.utils.data import DataLoader, SequentialSampler
 from   beam import Beam
@@ -36,7 +36,12 @@ def predict_single(inputs, model, tokenizer, max_gen_len=100):
             transformer_outputs = model(input_ids, past_key_values=past_hidden)
             out = softmax(transformer_outputs[0][:, -1, :]).data
             beam.advance(out)
-            past = [torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)],dim=0) if type(x)==tuple else x for x in transformer_outputs[1]]
+            past = [
+                torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)], dim=0)
+                if type(x) == tuple
+                else x
+                for x in transformer_outputs[1]
+            ]
             past_hidden = [x.data.index_select(1, beam.getCurrentOrigin()) for x in past]
         hyp = beam.getHyp(beam.getFinal())
         pred = beam.buildTargetTokens(hyp)[:beam_size]
@@ -77,8 +82,16 @@ if __name__ == "__main__":
 
     transformers.logging.set_verbosity_error()
 
-    datasource = (nl for nl, code in data.formats.conala("datasets/conala/test.json"))
-    predictions = predict("microsoft/CodeGPT-small-py-adaptedGPT2", datasource)
+    model_uri = "microsoft/CodeGPT-small-py-adaptedGPT2"
+
+    tokenizer = get_gpt2_tokenizer(model_uri)
+
+    datasource = data.formats.conala("datasets/conala/test.json")
+    dataset = CodeGPTDataset.from_preprocessed(
+        (preprocess(nl, "", tokenizer, padding=False) for nl, code in datasource),
+        tokenizer=tokenizer
+    )
+    predictions = predict(model_uri, dataset)
     prediction = next(predictions)
 
     print(prediction)
