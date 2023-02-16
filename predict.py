@@ -5,52 +5,53 @@ from   torch.utils.data import DataLoader, SequentialSampler
 from   beam import Beam
 
 
+def post_process_hidden_layers(layers):
+    processed_layers = []
+    for layer in layers:
+        if type(layer) == tuple:
+            keys, values = layer
+            processed = torch.cat([keys.unsqueeze(0), values.unsqueeze(0)], dim=0)
+        else:
+            processed = layer
+        processed_layers.append(processed)
+    return processed_layers
+
+
 def predict_single(inputs, model, tokenizer, max_gen_len=100):
     with torch.no_grad():
         beam_size = 10
         softmax = torch.nn.LogSoftmax(dim=-1)
         hidden_layers = model(inputs).past_key_values
-        p = []
+        predictions = []
         zero = torch.cuda.LongTensor(1).fill_(0)
         
-        past = [
-            torch.cat(
-                [layer[0].unsqueeze(0), layer[1].unsqueeze(0)],
-                dim=0
-            )
-            if type(layer) == tuple else layer
-            for layer in hidden_layers
-        ]
-
+        past = post_process_hidden_layers(hidden_layers)
         past_hidden = [
             layer.expand(-1, beam_size, -1, -1, -1)
             for layer in past
         ]
 
         beam = Beam(beam_size, tokenizer.bos_token_id, tokenizer.eos_token_id)
-        input_ids = None
         for _ in range(max_gen_len): 
             if beam.done():
                 break
-            input_ids = beam.getCurrentState()    
+
+            input_ids = beam.getCurrentState()
             transformer_outputs = model(input_ids, past_key_values=past_hidden)
-            out = softmax(transformer_outputs[0][:, -1, :]).data
-            beam.advance(out)
-            past = [
-                torch.cat([x[0].unsqueeze(0),x[1].unsqueeze(0)], dim=0)
-                if type(x) == tuple
-                else x
-                for x in transformer_outputs[1]
-            ]
-            past_hidden = [x.data.index_select(1, beam.getCurrentOrigin()) for x in past]
+            p = softmax(transformer_outputs.logits[:, -1, :]).data
+            beam.advance(p)
+            past = post_process_hidden_layers(transformer_outputs.past_key_values)
+            origin = beam.getCurrentOrigin()
+            past_hidden = [x.data.index_select(1, origin) for x in past]
+        
         hyp = beam.getHyp(beam.getFinal())
         pred = beam.buildTargetTokens(hyp)[:beam_size]
 
         pred = [torch.cat([x.view(-1) for x in p]+[zero]*(max_gen_len-len(p))).view(1,-1) for p in pred]
-        p.append(torch.cat(pred, 0).unsqueeze(0))
+        predictions.append(torch.cat(pred, 0).unsqueeze(0))
         
-        p = torch.cat(p, 0)
-        for pred in p:
+        predictions = torch.cat(predictions, 0)
+        for pred in predictions:
             t = pred[0].cpu().numpy()
             t = list(t)
             if 0 in t:
