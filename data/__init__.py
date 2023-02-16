@@ -25,6 +25,20 @@ def preprocess_code_train(code, tokenizer, block_size=512):
     return code_tokens, labels
 
 
+def preprocess(query, response, tokenizer, padding, block_size=512):
+    query_tokens = tokenizer.encode(query)
+    response_tokens = tokenizer.encode(response)
+    tokens = query_tokens + response_tokens
+    labels = [1] * len(query_tokens) + [2] * len(response_tokens)
+
+    if padding:
+        pad_length = block_size - len(tokens)
+        if pad_length > 0:
+            tokens += [tokenizer.pad_token_id] * pad_length
+            labels += [0] * pad_length
+
+    return tokens, labels
+
 def preprocess_train(nl, code, tokenizer, block_size=512):
     code_tokens = tokenizer.encode(code)
     nl_tokens, labels = preprocess_test(nl, tokenizer, block_size=float("inf"))

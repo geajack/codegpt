@@ -5,7 +5,7 @@ from data import CodeGPTDataset
 from model import get_gpt2
 
 
-def contextual_conala_contexts(filepath, include_body=True):
+def contextual_conala_contexts(filepath):
     with open(filepath) as file:
         lines = file.readlines()
 
@@ -23,17 +23,16 @@ def contextual_conala_contexts(filepath, include_body=True):
 
         final_code = f"def {function_name}({parameter_string}):\n"
         final_code += f'    """{nl}"""\n'
-        if include_body:
-            for line in code.splitlines():
-                final_code += "    " + line + "\n"
+        body = ""
+        for line in code.splitlines():
+            body += "    " + line + "\n"
 
-        yield final_code
+        yield final_code, body
 
 
 if __name__ == "__main__":
-    model, tokenizer = get_gpt2("microsoft/CodeGPT-small-py-adaptedGPT2")
-    dataset = CodeGPTDataset.from_training_data(
-        (("", code) for code in contextual_conala_contexts()),
-        tokenizer
-    )
-    print(len(dataset))
+    source = contextual_conala_contexts("/home/ICTDOMAIN/d20126116/Code/CodeGPT/Codebase/datasets/contextual_conala/test.jsonl")
+    for n in range(3):
+        head, body = next(source)
+        print(head, end="")
+        print(body)

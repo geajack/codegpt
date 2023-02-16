@@ -1,5 +1,5 @@
 from util import *
-from data import CodeGPTDataset, preprocess_code_train
+from data import *
 from model import get_gpt2_tokenizer
 from data.contextual_conala import contextual_conala_contexts
 from train import train
@@ -7,13 +7,13 @@ from train import train
 
 
 if __name__ == "__main__":
-    root = output_directory("contextual_conala_see_dataset")
+    root = output_directory("train_on_contextual_conala")
 
     tokenizer = get_gpt2_tokenizer("microsoft/CodeGPT-small-py-adaptedGPT2")
 
     preprocessed = (
-        preprocess_code_train(code, tokenizer=tokenizer)
-        for code in contextual_conala_contexts("datasets/contextual_conala/train.jsonl")
+        preprocess(preamble, body, tokenizer=tokenizer)
+        for preamble, body in contextual_conala_contexts("datasets/contextual_conala/train.jsonl")
     )
 
     dataset = CodeGPTDataset.from_preprocessed(
