@@ -6,9 +6,13 @@ from   beam import Beam
 
 
 def post_process_hidden_layers(layers):
+    # Each hidden layer will be processed into a tensor of dimensions
+    #    (key/value, batch_size, num_heads, sequence_length, embed_size_per_head)
     processed_layers = []
     for layer in layers:
         if type(layer) == tuple:
+            # converts a pair of tensors of the form (k, v) into a single tensor
+            # where the first dimension selects either k or v.
             keys, values = layer
             processed = torch.cat([keys.unsqueeze(0), values.unsqueeze(0)], dim=0)
         else:
@@ -36,12 +40,13 @@ def predict_single(inputs, model, tokenizer, max_gen_len=100):
             if beam.done():
                 break
 
-            input_ids = beam.getCurrentState()
+            input_ids = beam.getCurrentState() # (beam_width, 1)
             transformer_outputs = model(input_ids, past_key_values=past_hidden)
-            p = softmax(transformer_outputs.logits[:, -1, :]).data
+            logits = transformer_outputs.logits # (beam_width, 1, vocabulary_size)
+            p = softmax(logits[:, -1, :]).data
             beam.advance(p)
+            origin = beam.getCurrentOrigin() # list of indices in the beam width
             past = post_process_hidden_layers(transformer_outputs.past_key_values)
-            origin = beam.getCurrentOrigin()
             past_hidden = [x.data.index_select(1, origin) for x in past]
         
         hyp = beam.getHyp(beam.getFinal())
@@ -83,16 +88,31 @@ if __name__ == "__main__":
 
     transformers.logging.set_verbosity_error()
 
-    model_uri = "microsoft/CodeGPT-small-py-adaptedGPT2"
-
-    tokenizer = get_gpt2_tokenizer(model_uri)
-
-    datasource = data.formats.conala("datasets/conala/test.json")
-    dataset = CodeGPTDataset.from_preprocessed(
-        (preprocess(nl, "", tokenizer, padding=False) for nl, code in datasource),
+    datasource = (nl for nl, code in data.formats.conala("datasets/conala/test.json"))
+    tokenizer = get_gpt2_tokenizer("microsoft/CodeGPT-small-py-adaptedGPT2")
+    dataset = CodeGPTDataset.from_test_data(
+        datasource=datasource,
         tokenizer=tokenizer
     )
-    predictions = predict(model_uri, dataset)
+    # dataset = CodeGPTDataset.from_preprocessed(
+    #     (preprocess(nl, "", tokenizer, padding=False) for nl in datasource),
+    #     tokenizer=tokenizer
+    # )
+    predictions = predict("microsoft/CodeGPT-small-py-adaptedGPT2", dataset)
     prediction = next(predictions)
-
     print(prediction)
+
+    # import data.formats
+    # import transformers
+
+    # transformers.logging.set_verbosity_error()
+
+    # model_uri = "microsoft/CodeGPT-small-py-adaptedGPT2"
+
+    # tokenizer = get_gpt2_tokenizer(model_uri)
+
+    # datasource = data.formats.conala("datasets/conala/test.json")
+    # predictions = predict(model_uri, dataset)
+    # prediction = next(predictions)
+
+    # print(prediction)
